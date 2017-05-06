@@ -294,7 +294,7 @@ def read_passwdpolicy_info(file):
 def evaluate_passwdpolicy_info(dict):
 
         
-    returnString = "";
+    returnString = ""
 
     if dict["ENCRYPT_METHOD"] == "MD5":
         returnString = (returnString + "Your currently password encrypting method is MD5. " + 
@@ -462,6 +462,7 @@ def read_sudoers_info(file):
     return values
 
 def evaluate_sudoers_info(dict):
+    print dict
     returnString = ""
     return returnString
 

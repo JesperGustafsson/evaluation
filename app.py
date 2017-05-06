@@ -30,15 +30,12 @@ if __name__ == '__main__':
         finalString += "### " + moduleName + " ###\n\n"
         
         file = open(resultPath + moduleName + "_info/" + hostname + ".log", "r")
-        method_to_call = getattr(rjParser, "read_" + moduleName + "_info")
-        dict = method_to_call(file)
+
+        audit_module = getattr(rjParser, moduleName)
+        dict = audit_module.read(file)        
+        returnString = audit_module.evaluate(dict)
         
-        print "######################\n######################"
-        method_to_call = getattr(rjParser, "evaluate_" + moduleName + "_info")
-        returnString = method_to_call(dict)
-        
-        finalString += str(returnString)
-        
+        finalString += str(returnString)        
         finalString += "\n##################\n\n\n\n\n"
         
        # output.write(str(returnString) + "\n##################\n\n\n\n\n")

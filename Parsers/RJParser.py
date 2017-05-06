@@ -281,7 +281,9 @@ def read_passwdpolicy_info(file):
     next_line = file.readline()
     
     while(next_line):
+
         if "#" not in next_line and not next_line.isspace():
+
             key_value = next_line.split()
             values[key_value[0]] = key_value[1]
             
@@ -290,15 +292,16 @@ def read_passwdpolicy_info(file):
     return values
 
 def evaluate_passwdpolicy_info(dict):
+
         
-    returnString = "";
+    returnString = ""
 
     if dict["ENCRYPT_METHOD"] == "MD5":
         returnString = (returnString + "Your currently password encrypting method is MD5. " + 
                         "\nYou should consider changing the encrypting method to SHA256 or SHA516.")
         
         
-    if dict["PASS_MIN_DAYS"] > int(0): 
+    if dict["PASS_MIN_DAYS"] > '0': 
         returnString = (returnString + "Warning: You have to wait " + dict["PASS_MIN_DAYS"] + 
                         " days to change password, this can be a security risk in case of accidental password change.")
 
@@ -460,6 +463,7 @@ def read_sudoers_info(file):
     return values
 
 def evaluate_sudoers_info(dict):
+    print dict
     returnString = ""
     return returnString
 

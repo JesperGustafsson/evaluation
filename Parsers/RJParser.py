@@ -13,22 +13,25 @@ def read_cron_at_info(file):
     files = ["null", "/etc/cron.allow", "/etc/at.allow"]
     fileIndex = 0
   
-    while True:
-        nextLine = file.readline()
-        if (nextLine == ""):
+    next_line = file.readline()
+    
+    while next_line:
+        if (next_line == ""):
             if (file.read() == ""):
                 break
         
-        elif "No such file or directory" in nextLine:
+        elif "No such file or directory" in next_line:
             fileIndex = fileIndex + 1
             values[files[fileIndex]] = "No such file or directory"
         
-        elif "total" in nextLine:
+        elif "total" in next_line:
             fileIndex = fileIndex + 1
         
         else: 
-            innerValues = nextLine.split()
+            innerValues = next_line.split()
             values[files[fileIndex]+innerValues[8]] = innerValues
+            
+        next_line = file.readline()
             
     return values
 
@@ -76,34 +79,57 @@ def read_diskvolume_info(file):
         innerValues = nextLine.split()
         values[innerValues[5]] = innerValues
 
-    pass
+    return values
 
 def evaluate_diskvolume_info(dict):
-    pass
+    returnString = ""
+    
+    for key in dict:
+        if dict[key][4][:-1] > 80:
+            returnString += "The filesystem " + key + " is at " + dict[key][4] + " capacity."
+        
+    return returnString
 
 def read_encrypted_disk_info(file):
     values = dict()
 
-    while True:
-        innerValues = dict()
+    next_line = file.readline()
+    while next_line:
+        inner_values = dict()
         
-        nextLine = file.readline()
-        if (nextLine == ""):
-            break
-        nLineSplit = nextLine.split()
-        
-        for i in range(1, len(nLineSplit)):
-            nLineSSPlit = nLineSplit[i].split("=")
 
-            innerValues[nLineSSPlit[0]] = nLineSSPlit[1]
+        n_line_split = next_line.split()
+        
+        for i in range(1, len(n_line_split)):
+            n_line_ssplit = n_line_split[i].split("=")
+
+            inner_values[n_line_ssplit[0]] = n_line_ssplit[1]
             
-        values[nLineSplit[0]] = innerValues
+        values[n_line_split[0]] = inner_values
+        next_line = file.readline()
+
     
     return values
 
-def evaluate_encrypted_disk_info(dict):
-    
+def evaluate_encrypted_disk_info(dict0):
     returnString = ""
+    uuid_dict = dict()
+    
+    print dict
+    
+    for key in dict0:
+        for key_key in dict0:
+            if ("UUID" in key_key):
+                uuid_dict[dict0[key][key_key]].append(key)
+                
+    
+    for key in uuid_dict:
+        if len(uuid_dict[key]) != len(set(uuid_dict[key])):
+            returnString += "The UUID " + key + " is shared between the filesystems: " + set(uuid_dict[key]) 
+            + "Because of the low chance of UUID duplication in proper generation it is possible this has been altered maliciously."
+            
+        
+        
     return returnString
 
 def read_environment_info(file):
@@ -124,10 +150,59 @@ def read_environment_info(file):
         
     return values
 
-def evaluate_environment_info(dict):
+def evaluate_environment_info(info):
+    print "WAOW"
     returnString = ""
+    env_file = open("acceptable_env.txt", "r")
+    env_dict = dict()
     
+    next_line = env_file.readline()
+    while next_line:
+        print "[" + next_line + "]"
+        if not("%" in next_line or next_line.isspace()):
+            print "[" + next_line + "]"
+            key = next_line.split("=")[0]
+            values = next_line.split("=")[1].split("|")
+            values[len(values) - 1] = values[len(values) - 1][:-1]
+            env_dict[key] = values
+        
+        next_line = env_file.readline()
+        
+        
+    print env_dict
+    print info
     
+    for key in env_dict:
+        #check if key exists in customer file
+        if info.has_key(key[1:]):
+            #check if key is dangerous
+            if key.startswith("^"):
+                returnString += "The environment key " + key 
+                + " is considered dangerous. Consider removing it\n"
+        
+            else:
+                customer_value = info[key[1:]]
+                values = env_dict[key]
+                
+                #check if value is dangerous
+                if "^" + customer_value in values:
+                    returnString += "The value for the environment key " + key 
+                    + "is considered dangerous. " + "Consider changing to " 
+                    + [x for x in list if not x.startswith("^")] 
+                    + "preferably" +[x for x in list if x.startswith("*") + "\n"]
+                    
+                #check if value is not preferable
+                if "<" + customer_value in values:
+                    returnString += "The value for the environment key " + key 
+                    + "is not considered preferable. " + "Consider changing to " 
+                    + [x for x in list if not x.startswith("<", "^")] 
+                    + " preferably" +[x for x in list if x.startswith("*") + "\n"]  
+                    
+                
+        if (key.startswith("#")):
+            returnString += "The environment key " + key 
+            + " could not be found. It is considered important.\n"
+
     return returnString
 
 def read_firewall_info(file):

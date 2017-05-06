@@ -8,7 +8,6 @@ import itertools
 
 
 def read_cron_at_info(file):
-    print("RJParser/read_cron_at_info")
     
     values = dict()
     files = ["null", "/etc/cron.allow", "/etc/at.allow"]
@@ -16,30 +15,24 @@ def read_cron_at_info(file):
   
     while True:
         nextLine = file.readline()
-        print "[" + nextLine + "]"
         if (nextLine == ""):
-            print "first if"
             if (file.read() == ""):
                 break
         
         elif "No such file or directory" in nextLine:
-            print "if"
             fileIndex = fileIndex + 1
             values[files[fileIndex]] = "No such file or directory"
         
         elif "total" in nextLine:
-            print "elif"
             fileIndex = fileIndex + 1
         
         else: 
-            print "else"
             innerValues = nextLine.split()
             values[files[fileIndex]+innerValues[8]] = innerValues
             
     return values
 
 def evaluate_cron_at_info(dict):
-    print "RJParser/evaluate_cron_at_info"
     returnString = ""
     
     for key, value in dict.items():
@@ -56,19 +49,14 @@ def evaluate_cron_at_info(dict):
 
 
 def read_crontab_info(file):
-    print "RJParser/read_crontab"
     values = dict()
     notSetupString = "No crontab has been set up for the following: \n"
     
-    while True: 
-        nextLine = file.readline()
-        if (nextLine.startswith("#") or nextLine == ""):
-            print ("if")
-        else:
-            notSetupString = notSetupString + (nextLine.split(" ")[3]);
-            
-        print notSetupString
-    pass
+    next_line = file.readline()[:-1]
+    while (next_line): 
+        notSetupString += (next_line.split(" ")[3]);
+        next_line = file.readline()[:-1]    
+    return values
 
 def evaluate_crontab_info(dict):
     """Already implemented in the read method"""
@@ -86,10 +74,8 @@ def read_diskvolume_info(file):
             break
         
         innerValues = nextLine.split()
-        print innerValues[5]
         values[innerValues[5]] = innerValues
 
-    print "End of read_diskvolume"
     pass
 
 def evaluate_diskvolume_info(dict):
@@ -104,16 +90,11 @@ def read_encrypted_disk_info(file):
         nextLine = file.readline()
         if (nextLine == ""):
             break
-        print nextLine
         nLineSplit = nextLine.split()
-        print nLineSplit
         
         for i in range(1, len(nLineSplit)):
-            print "i: " + str(i)
-            print "SPLINTOR: " + nLineSplit[i]
             nLineSSPlit = nLineSplit[i].split("=")
-            print "SPLINTORED: " 
-            print nLineSSPlit
+
             innerValues[nLineSSPlit[0]] = nLineSSPlit[1]
             
         values[nLineSplit[0]] = innerValues
@@ -121,14 +102,8 @@ def read_encrypted_disk_info(file):
     return values
 
 def evaluate_encrypted_disk_info(dict):
+    
     returnString = ""
-    
-    for key in dict:
-        print "key: " + key
-        for keykey in dict[key]:
-            print "keykey: " + keykey
-            print "value?: " + dict[key][keykey]
-    
     return returnString
 
 def read_environment_info(file):
@@ -162,12 +137,9 @@ def read_firewall_info(file):
         nextLine = file.readline()
         if (nextLine == ""): break
         innerValues = nextLine.split()
-        print innerValues
         if (innerValues and innerValues[0] == "Chain"):
             chain = innerValues[1]
             policy = innerValues[3].split(")")[0]
-            print chain
-            print policy
             values[chain] = policy
             
     return values
@@ -176,25 +148,19 @@ def evaluate_firewall_info(dict):
     returnString = ""
     
     policy = 000
-    print policy
     
     if dict["INPUT"] == "ACCEPT": 
         print "InputAcc" 
         policy = policy + 100
-        print policy
         
     if dict["FORWARD"] == "ACCEPT":
         print "ForwardAcc"
         policy = policy + 10
-        print policy
-
         
     if dict["OUTPUT"] == "ACCEPT":
         print "OutputAcc"
         policy = policy + 1
-        print policy
         
-    print "final policy: " + str(policy)
     
     if (policy >= 100):
         returnString = returnString + ("Warning: There is no firewall set up for incoming traffic.\n");
@@ -207,22 +173,20 @@ def evaluate_firewall_info(dict):
     if (policy >= 1):
         returnString = returnString + ("Warning: There is no firewall set up for outgoing traffic.\n");
         policy = policy - 1
-        
-    print "final2 policy: " + str(policy) + "####\n####\n####"
-    
-    print returnString
-    print dict
+
     return returnString
 
 def read_groups_info(file):
     
     values = dict()
     
-    while True:
-        nextLine = file.readline()
-        innerValues = nextLine.split(":")
-        print innerValues
-        values[innerValues[0]] = innerValues
+    next_line = file.readline()[:-1]
+    
+    while next_line:
+        inner_values = next_line.split(":")
+        values[inner_values[0]] = inner_values
+        next_line = file.readline()[:-1]
+
         
     return values
         
@@ -234,10 +198,14 @@ def evaluate_groups_info(dict):
 
 
 def read_lastlog_info(file):
-    pass
+    value = dict()
+    
+    return value
 
 def evaluate_lastlog_info(dict):
-    pass
+    returnString = ""
+    return returnString
+    
 
 def read_modprobe_info(file):
     values = dict()
@@ -269,7 +237,6 @@ def read_networkvolume_info(file):
         nextLine = file.readline()
         if ("#" in nextLine): break
         innerValues = nextLine.split()
-        print innerValues
         values[innerValues[2]] = innerValues
         
     while True:
@@ -299,11 +266,14 @@ def read_open_connections_info(file):
         innerValues = next_line.split()
         #Unsure what should be the key..
         values[innerValues[0] + "#" + innerValues[3]] = innerValues
-    
+        next_line = file.readline()
+
     return values
 
 def evaluate_open_connections_info(dict):
-    pass
+    returnString = ""
+    
+    return returnString
 
 def read_passwdpolicy_info(file):
     values = dict()
@@ -314,7 +284,6 @@ def read_passwdpolicy_info(file):
 
         if "#" not in next_line and not next_line.isspace():
 
-
             key_value = next_line.split()
             values[key_value[0]] = key_value[1]
             
@@ -323,9 +292,8 @@ def read_passwdpolicy_info(file):
     return values
 
 def evaluate_passwdpolicy_info(dict):
-    
 
-    
+        
     returnString = "";
 
     if dict["ENCRYPT_METHOD"] == "MD5":
@@ -433,6 +401,7 @@ def read_startup_info(file):
     while (next_line):
         next_values = next_line.split()
         values[next_values[8]] = next_values
+        next_line = file.readline()
         
     
     return values
@@ -463,7 +432,6 @@ def read_sudoers_info(file):
             next_line = file.readline()
             continue
         
-        print next_line
         inner_values = next_line.split()
         username = inner_values[0]
         command = inner_values[2]
@@ -481,12 +449,7 @@ def read_sudoers_info(file):
             run_as_groups = inner_values[1][:-1]
         else:
             run_as_users = inner_values[0][-1:-1]
-        
-        print username
-        print run_as_users
-        print run_as_groups
-        print hosts
-        print command
+
 
         
         next_line = file.readline()
@@ -503,7 +466,7 @@ def evaluate_sudoers_info(dict):
     return returnString
 
 
-def read_suid_files(file):
+def read_suid_files_info(file):
     values = dict()
     
     next_line = file.readline()
@@ -516,7 +479,7 @@ def read_suid_files(file):
     
     return values
 
-def evaluate_suid_files(dict):
+def evaluate_suid_files_info(dict):
     returnString = ""
     return returnString
 
@@ -587,10 +550,6 @@ def evaluate_users_info(dict):
                   
     return returnString
     
-def test2(file):
-    print("RJParser/test2")
-    print file.read()
-    pass
 
 
 def readwords(mfile):

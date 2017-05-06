@@ -10,22 +10,39 @@ from Parsers import RJParser as rjParser
 
 if __name__ == '__main__':
     
-    moduleName = 'passwdpolicy'
-    hostname = "jesper-Aspire-E5-571"
-    
-    resultPath = "/home/stoff/TrueSec/result/"
 
+    finalString = ""
+    output = open("Output.txt", "w")
+    
+    tests = [i[:-1] for i in open("RJTests")]
+    print tests
     
     
-    file = open(resultPath + moduleName + "_info/" + hostname + ".log", "r")
-    method_to_call = getattr(rjParser, "read_" + moduleName + "_info")
-    dict = method_to_call(file)
+    for test in tests[:]:
+        print test
+        
     
-    print "######################\n######################"
-    method_to_call = getattr(rjParser, "evaluate_" + moduleName + "_info")
-    returnString = method_to_call(dict)
+        moduleName = test
+        hostname = "jesper-Aspire-E5-571"
+        
+        resultPath = "/home/stoff/TrueSec/result/"
+        
+        finalString += "### " + moduleName + " ###\n\n"
+        
+        file = open(resultPath + moduleName + "_info/" + hostname + ".log", "r")
+        method_to_call = getattr(rjParser, "read_" + moduleName + "_info")
+        dict = method_to_call(file)
+        
+        print "######################\n######################"
+        method_to_call = getattr(rjParser, "evaluate_" + moduleName + "_info")
+        returnString = method_to_call(dict)
+        
+        finalString += str(returnString)
+        
+        finalString += "\n##################\n\n\n\n\n"
+        
+       # output.write(str(returnString) + "\n##################\n\n\n\n\n")
+    
+    output.write(finalString)
 
-    print returnString
-    
-    
     pass

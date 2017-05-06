@@ -1,0 +1,36 @@
+['Chain', 'INPUT', '(policy', 'ACCEPT)']
+INPUT
+ACCEPT
+['target', 'prot', 'opt', 'source', 'destination']
+[]
+['Chain', 'FORWARD', '(policy', 'ACCEPT)']
+FORWARD
+ACCEPT
+['target', 'prot', 'opt', 'source', 'destination']
+[]
+['Chain', 'OUTPUT', '(policy', 'ACCEPT)']
+OUTPUT
+ACCEPT
+['target', 'prot', 'opt', 'source', 'destination']
+######################
+######################
+0
+InputAcc
+100
+ForwardAcc
+110
+OutputAcc
+111
+final policy: 111
+final2 policy: 0####
+####
+####
+Warning: There is no firewall set up for incoming traffic.
+Warning: There is no firewall set up for forwarding traffic.
+Warning: There is no firewall set up for outgoing traffic.
+
+{'FORWARD': 'ACCEPT', 'INPUT': 'ACCEPT', 'OUTPUT': 'ACCEPT'}
+Warning: There is no firewall set up for incoming traffic.
+Warning: There is no firewall set up for forwarding traffic.
+Warning: There is no firewall set up for outgoing traffic.
+

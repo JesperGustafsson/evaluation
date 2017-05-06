@@ -97,8 +97,7 @@ def evaluate_diskvolume_info(dict):
 
 def read_encrypted_disk_info(file):
     values = dict()
-    
-    
+
     while True:
         innerValues = dict()
         
@@ -179,18 +178,18 @@ def evaluate_firewall_info(dict):
     policy = 000
     print policy
     
-    if (dict["INPUT"] == "ACCEPT"): 
+    if dict["INPUT"] == "ACCEPT": 
         print "InputAcc" 
         policy = policy + 100
         print policy
         
-    if (dict["FORWARD"] == "ACCEPT"):
+    if dict["FORWARD"] == "ACCEPT":
         print "ForwardAcc"
         policy = policy + 10
         print policy
 
         
-    if (dict["OUTPUT"] == "ACCEPT"):
+    if dict["OUTPUT"] == "ACCEPT":
         print "OutputAcc"
         policy = policy + 1
         print policy

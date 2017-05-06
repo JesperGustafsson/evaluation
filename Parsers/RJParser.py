@@ -448,6 +448,7 @@ def read_sudoers_info(file):
             run_as_users = inner_values[0][-1:-1]
 
 
+        values[username] = [hosts, run_as_users, run_as_groups, command]
         
         next_line = file.readline()
 

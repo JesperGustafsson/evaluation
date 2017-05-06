@@ -18,14 +18,14 @@ if __name__ == '__main__':
     print tests
     
     
-    for test in tests[:]:
+    for test in tests[4:5]:
         print test
         
     
         moduleName = test
         hostname = "jesper-Aspire-E5-571"
         
-        resultPath = "/home/stoff/TrueSec/result/"
+        resultPath = "/home/jesper/Documents/remote_job_linux_osx-master-d98598cf1ea7ba905e77c62efb3b52a4bcacf366/result/"
         
         finalString += "### " + moduleName + " ###\n\n"
         

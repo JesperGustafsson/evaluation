@@ -207,7 +207,7 @@ def evaluate_environment_info(info):
 
 def read_firewall_info(file):
     values = dict()
-    print "TA BORT DETTA"
+    
     
     while True:
         nextLine = file.readline()

@@ -7,14 +7,15 @@ Created on May 3, 2017
 
 
 from Parsers.RJParser import *
-from Parsers import RJParser
+from Parsers import RJParser as rjParser
 
 if __name__ == '__main__':
     
-    moduleName = 'firewall'
+    moduleName = 'users'
     hostname = "jesper-Aspire-E5-571"
     
     resultPath = "/home/stoff/TrueSec/result/"
+
     
     
     file = open(resultPath + moduleName + "_info/" + hostname + ".log", "r")

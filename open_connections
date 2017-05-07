@@ -1,0 +1,22 @@
+## BAD LISTEN PORTS ##
+port808
+
+## BAD UNCONN PORTS ##
+port10
+
+## BAD ESTAB PORTS ##
+port8
+
+## BAD TIME-WAIT PORTS ##
+port5
+
+## BAD CLOSE-WAIT PORTS ##
+port1
+port2
+port3
+
+
+
+## RECOMMENDED PORT USAGE ##
+port0 = LISTEN
+PORT808 = UNCONN

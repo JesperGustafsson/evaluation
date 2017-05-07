@@ -383,23 +383,55 @@ class networkvolume(AuditModule):
     def read(file):
         values = dict()
         
-        while True:
-            nextLine = file.readline()
-            if ("#" in nextLine): break
-            innerValues = nextLine.split()
-            values[innerValues[2]] = innerValues
-            
-        while True:
-            nextLine = file.readline()
-            if ("#" in nextLine): continue
-            if (nextLine == ""): break
-            innerValues = nextLine.split()
-            values[innerValues[1]] = innerValues
+        next_line = file.readline()
+        
+        while next_line and "#" not in next_line:
+            innerValues = next_line.split()
+            values["1" + innerValues[2]] = innerValues
+            next_line = file.readline()
+
+        while next_line:
+            if ("#" in next_line): 
+                next_line = file.readline()
+                continue
+            innerValues = next_line.split()
+            values["2" + innerValues[1]] = innerValues
+            next_line = file.readline()
+
+        
             
         return values
     @staticmethod
-    def evaluate(dict):
-        pass
+    def evaluate(info):
+        returnString = ""
+    
+        uuid_dict = dict()
+        
+        mount_keys = []
+        fstab_keys = []
+        
+        for key in info:
+            if key.startswith("1"): mount_keys.append(key)
+            elif key.startswith("2"): fstab_keys.append(key)
+        
+        returnString += "\n ###Unsure how to evaluate this part... [networkvolume/evaluate] ###\n"
+        for key in mount_keys:
+            need_this_temp_var = "to_keep_the_for_loop"
+            #Unsure how to parse the first part...
+        
+        
+        for key in fstab_keys:
+            inner_key = info[key][0].split("=")[1]
+            inner_value = key[1:]
+            old_value = uuid_dict.get(inner_key, "")
+            uuid_dict[inner_key] = old_value + key[1:] 
+            
+        for key in uuid_dict:
+            if len(uuid_dict[key]) > 1:
+                returnString += "The UUID: " + key + " is shared between the filesystems: " + uuid_dict[key]
+            
+        
+        return returnString
 
 class open_connections(AuditModule):
 
@@ -426,7 +458,11 @@ class open_connections(AuditModule):
     @staticmethod
     def evaluate(dict):
         returnString = ""
+        """Lists of listen ports, estab ports etc
         
+        make sure that the ports are not bad according to open_connections file
+        
+        """
         return returnString
 
 class passwdpolicy(AuditModule):
@@ -485,11 +521,62 @@ class processes(AuditModule):
             next_line = file.readline()
             
             values[innerValues[1]] = innerValues
-        pass
+        
+        return values
 
     @staticmethod
     def evaluate(dict):
         returnString = ""
+        
+        processes_file = open("processes", "r")
+        
+        next_line = processes_file.readline() #Skip first line
+        next_line = processes_file.readline()
+                
+        expected_processes = []
+        non_root_blacklist = []
+        blacklist = []
+        
+ 
+        while next_line and "#" not in next_line and not next_line.isspace():
+            expected_processes.append(next_line[:-1])
+            next_line = processes_file.readline()
+        
+        next_line = processes_file.readline()
+        
+        while next_line and "#" not in next_line and not next_line.isspace():
+            non_root_blacklist.append(next_line[:-1])
+            next_line = processes_file.readline()
+    
+        next_line = processes_file.readline()
+
+
+        while next_line and "#" not in next_line and not next_line.isspace():
+            blacklist.append(next_line[:-1])
+            next_line = processes_file.readline()
+            
+        
+        
+        for key in dict.iterkeys():
+            customer_process = dict[key][10][:-1]
+            print "{" + customer_process + "}"
+            
+            #if process is blacklist
+            if customer_process in blacklist:
+                returnString += "The process " + customer_process + " currently running on your service is in our blacklist\n"
+            
+            #if process is non root
+            elif customer_process in non_root_blacklist and dict[key][0 != "root"]:
+                returnString += "The process " + customer_process + " currently running on your service as a non-root. This is considered a security risk\n"
+
+            #if expected process is found, it removes it from the exepcted processes list
+            if customer_process in expected_processes:
+                expected_processes = [x for x in expected_processes if x != customer_process]
+                
+        #if expected_processes is NOT empty
+        if expected_processes:
+            returnString += "The following processes were expected but could not be found on your system: " + str(expected_processes) + "\n"
+            
         return returnString
 
 class samba(AuditModule):
@@ -536,12 +623,16 @@ class sshd(AuditModule):
         next_line = file.readline()
         
         while (next_line):
+            print next_line
+
             if "No such file or directory" in next_line:
                 values["/etc/ssh/sshd_config"] = "No such file or directory"
                 
             if "#" not in next_line:
                 next_values = next_line.split()
                 values[next_values[0]] = next_values[1]
+                
+            else: print "HMM    "
             
             next_line = file.readline()
         

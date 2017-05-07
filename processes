@@ -1,0 +1,14 @@
+## Expected Processes ##
+expect procc1
+expect procc2
+[watchdog/1]
+## Blacklisted Processes (for non root) ##
+nonroot procc1
+nonroot procc2
+/lib/systemd/systemd-resolved
+[rcu_sched]
+## Blacklisted Processes (for all) ##
+blacklist procc1
+blacklist procc2
+blacklist procc3
+[rcu_bh]

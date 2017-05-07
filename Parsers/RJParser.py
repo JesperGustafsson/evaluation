@@ -516,18 +516,29 @@ class sudoers(AuditModule):
         while (next_line):
             group = False
 
-            if "#" in next_line or "Defaults" in next_line or next_line.isspace(): 
+            if "#" in next_line or next_line.isspace(): 
                 next_line = file.readline()
                 continue
             
+            if "Defaults" in next_line:
+                inner_values = next_line.split()
+                tmp = inner_values[1].split("=")
+                username = tmp[0]
+                values[username] = ['','','',command]
+                next_line = file.readline()
+                continue
+
             inner_values = next_line.split()
+
+
             username = inner_values[0]
+
             command = inner_values[2]
-            
+
             inner_values = inner_values[1].split("=")
-            
+
             hosts = inner_values[0]
-            
+
             inner_values = inner_values[1].split(":")
 
             
@@ -546,7 +557,34 @@ class sudoers(AuditModule):
         return values
     @staticmethod
     def evaluate(dict):
+        print dict
         returnString = ""
+
+        if dict.has_key("env_reset") == True:
+            returnString += "env_reset is available. The system will make sure the terminal environment remove any user variables and clear potentially harmful environmental variables from the sudo sessions \n \n"
+        else:
+            returnString += "env_reset variable has not been set. You should add it the variable in /etc/sudoers"    
+
+        for key in dict:
+            value = dict[key]
+
+            if key == "secure_path":
+
+                if value[3] != "[\'\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin\"\']":
+                 continue
+
+            if (value[0] and value[1] and value[2] and value[3]) == "ALL" and ("root" not in key) and ("%" not in key):
+                 returnString += "User: " + "\"" + key + "\"" + " has super user rights.\n\n"
+                 continue
+
+            if (value[0] and value[2] and value[3] == "ALL") and (value[1] == '') and ("root" not in key) and ("%admin" not in key) and ("%sudo" not in key):
+                 returnString += "Members of group: " + "\"" + key + "\"" + " may gain root privileges.\n\n"
+                 continue
+
+            if (value[0] and value[1] and value[2] and value[3] == "ALL") and ("root" not in key) and ("%admin" not in key) and ("%sudo" not in key):
+                 returnString += "Members of sudo group: " + "\"" + key + "\"" + " can execute any command\n\n"
+                 continue
+
         return returnString
 
 class suid_files(AuditModule):

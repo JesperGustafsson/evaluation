@@ -627,12 +627,16 @@ class sshd(AuditModule):
 
             if "No such file or directory" in next_line:
                 values["/etc/ssh/sshd_config"] = "No such file or directory"
+            
+            if "#" in next_line or next_line.isspace(): 
+                next_line = file.readline()
+                continue
+
+            next_values = next_line.split()
+  
                 
-            if "#" not in next_line:
-                next_values = next_line.split()
-                values[next_values[0]] = next_values[1]
-                
-            else: print "HMM    "
+
+            values[next_values[0]] = next_values[1]
             
             next_line = file.readline()
         
@@ -640,6 +644,39 @@ class sshd(AuditModule):
     @staticmethod
     def evaluate(dict):
         returnString = ""
+        for key in dict:
+            value = dict[key]
+
+
+            if key == "PermitRootLogin":
+                if value == "yes":
+            
+                    returnString +=  "PermitRootLogin is set to " + "\"" + value + "\"" + " this will allow multiple sysadmins to login to the server as root and the system might not know which sysadmins are logged in as root. You should change PermitRootLogin to \"no\" so the sysadmins have to login to the system first using their accounts before they can do \"-su\".\n\n"
+            if key == "Port":
+                if value == "22":
+                    returnString +=  "The default port is set to 22, hich the most attackers will check when they are tryingto brute force login to the server using several username and password combina-tions. You should consider using another port to login to the server."      
+           
+            if key == "LoginGraceTime":
+                intstr = int(value)
+                if intstr > 120:
+                    print "##############"
+                    returnString += "The server will have to wait " + "\"" + value + "\"" + " seconds before disconnecting after a unseccessful login connect request. You should change it to 60 seconds or 120 seconds.\n\n"
+
+            if key == "ListenAddress":
+                if value == "0.0.0.0":
+                    returnString += "The entry address is set at 0.0.0.0, this means it will listen to all interfaces, even external one. You should change the address to a internal one so that the server cannot be accessed from the internet unless portforwarded on the system routing.\n\n"
+        
+            if key == "StrictModes":
+                if value == "no":
+                    returnString += "StrictModes are currently set to \"no\". This means the server doesn't check the users permssion hme directory and rhost before they can login. You should change this to \"yes\".\n\n"
+
+            if key == "RSAAuthentication":
+                if value == "no":
+                    returnString += "RSAAuthentication are currently set to \"no\". You should set it to \"yes\" to be able to use public and private key pairs created by the ssh-keygen1utility for authentication purposes.\n\n"
+            if key == "PasswordAuthentication":
+                if value == "no":
+                    returnString += "PasswordAuthentication are currently set to \"no\". You should set it to \"yes\" to always use a password based authentication.\n\n"
+
         return returnString
 
 class startup(AuditModule):
@@ -721,9 +758,10 @@ class sudoers(AuditModule):
             next_line = file.readline()
 
         return values
+
     @staticmethod
     def evaluate(dict):
-        print dict
+
         returnString = ""
 
         if dict.has_key("env_reset") == True:

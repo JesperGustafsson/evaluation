@@ -234,29 +234,15 @@ class firewall(AuditModule):
         policy = 000
         
         if dict["INPUT"] == "ACCEPT": 
-            print "InputAcc" 
-            policy = policy + 100
-            
+            returnString = returnString + ("Warning: There is no firewall set up for incoming traffic.\n");
+
+
         if dict["FORWARD"] == "ACCEPT":
-            print "ForwardAcc"
-            policy = policy + 10
+            returnString = returnString + ("Warning: There is no firewall set up for forwarding traffic.\n");
+
             
         if dict["OUTPUT"] == "ACCEPT":
-            print "OutputAcc"
-            policy = policy + 1
-            
-        
-        if (policy >= 100):
-            returnString = returnString + ("Warning: There is no firewall set up for incoming traffic.\n");
-            policy = policy - 100
-            
-        if (policy >= 10):
-            returnString = returnString + ("Warning: There is no firewall set up for forwarding traffic.\n");
-            policy = policy - 10
-            
-        if (policy >= 1):
             returnString = returnString + ("Warning: There is no firewall set up for outgoing traffic.\n");
-            policy = policy - 1
 
         return returnString
 

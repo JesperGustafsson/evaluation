@@ -16,7 +16,7 @@ class AuditModule():
 
 class cron_at(AuditModule):   
     @staticmethod
-    def read(file):        
+    def read(file):
         values = dict()
         files = ["null", "/etc/cron.allow", "/etc/at.allow"]
         fileIndex = 0
@@ -24,11 +24,8 @@ class cron_at(AuditModule):
         next_line = file.readline()
         
         while next_line:
-            if (next_line == ""):
-                if (file.read() == ""):
-                    break
             
-            elif "No such file or directory" in next_line:
+            if "No such file or directory" in next_line:
                 fileIndex = fileIndex + 1
                 values[files[fileIndex]] = "No such file or directory"
             
@@ -160,7 +157,7 @@ class environment(AuditModule):
             if (innerValues[0] == "LS_COLORS"): #Hard to parse and don't think it has anythign to do with security risks
                 continue
             
-            values[innerValues[0]] = innerValues[1]
+            values[innerValues[0]] = innerValues[1][:-1]
         return values
 
     @staticmethod
@@ -172,9 +169,7 @@ class environment(AuditModule):
         
         next_line = env_file.readline()
         while next_line:
-            print "[" + next_line + "]"
             if not("%" in next_line or next_line.isspace()):
-                print "[" + next_line + "]"
                 key = next_line.split("=")[0]
                 values = next_line.split("=")[1].split("|")
                 values[len(values) - 1] = values[len(values) - 1][:-1]
@@ -182,10 +177,8 @@ class environment(AuditModule):
             
             next_line = env_file.readline()
             
-            
         print env_dict
         print info
-        
         for key in env_dict:
             #check if key exists in customer file
             if info.has_key(key[1:]):
@@ -197,28 +190,27 @@ class environment(AuditModule):
                 else:
                     customer_value = info[key[1:]]
                     values = env_dict[key]
-                    
+
                     #check if value is dangerous
                     if "^" + customer_value in values:
-                        returnString += "The value for the environment key " + key 
-                        + "is considered dangerous. " + "Consider changing to " 
-                        + [x for x in list if not x.startswith("^")] 
-                        + "preferably" +[x for x in list if x.startswith("*") + "\n"]
-                        
-                    #check if value is not preferable
-                    if "<" + customer_value in values:
-                        returnString += "The value for the environment key " + key 
-                        + "is not considered preferable. " + "Consider changing to " 
-                        + [x for x in list if not x.startswith("<", "^")] 
-                        + " preferably" +[x for x in list if x.startswith("*") + "\n"]  
-                        
+                        returnString += "The value for the environment key " + key[1:] + " is considered dangerous. Consider changing to one of " + str([x[1:] for x in values if not x.startswith("^")]) + " preferably one of " + str([x[1:] for x in values if x.startswith("*")]) + "\n"
                     
-            if (key.startswith("#")):
-                returnString += "The environment key " + key + " could not be found. It is considered important.\n"
+                    #check if value is not preferable
+                    elif "<" + customer_value in values:
+                        if len([x for x in values if x.startswith("*")]) > 0:
+                            returnString += "The value for the environment key " + key[1:] + " is not considered preferable. Consider changing to one of " + str([x[1:] for x in values if x.startswith("*")]) + "\n" 
+                    
+                    #
+                    else: 
+                        returnString += "The value " + customer_value + " for the key " + key[1:] + " was not found in our list of \"predetermined\" values. \n\tRecommended values: " + str([x[1:] for x in values if x.startswith("*")]) + "\n\tOkay values: " + str([x[1:] for x in values if x.startswith("<")]) + "\n"
+                    
+            elif (key.startswith("#")):
+                returnString += "The environment key " + key[1:] + " could not be found. It is considered important.\n"
 
         return returnString
 
 class firewall(AuditModule):
+    
     @staticmethod
     def read(file):
         values = dict()
@@ -233,6 +225,8 @@ class firewall(AuditModule):
                 values[chain] = policy
                 
         return values
+
+
     @staticmethod
     def evaluate(dict):
         returnString = ""

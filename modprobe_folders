@@ -1,0 +1,19 @@
+### config folders
+alsa-base.conf
+blacklist-ath_pci.conf
+blacklist.conf
+blacklist-firewire.conf
+blacklist-framebuffer.conf
+blacklist-modem.conf
+blacklist-oss.conf
+blacklist-rare-network.conf
+intel-microcode-blacklist.conf
+iwlwifi.conf
+mlx4.conf
+vmwgfx-fbdev.conf
+### blacklisted
+joydev
+videobuf2_vmalloc
+### important
+inet_diag
+important_module

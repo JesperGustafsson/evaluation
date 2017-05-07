@@ -162,7 +162,6 @@ class environment(AuditModule):
 
     @staticmethod
     def evaluate(info):
-        print "WAOW"
         returnString = ""
         env_file = open("acceptable_env.txt", "r")
         env_dict = dict()
@@ -177,8 +176,6 @@ class environment(AuditModule):
             
             next_line = env_file.readline()
             
-        print env_dict
-        print info
         for key in env_dict:
             #check if key exists in customer file
             if info.has_key(key[1:]):
@@ -234,29 +231,15 @@ class firewall(AuditModule):
         policy = 000
         
         if dict["INPUT"] == "ACCEPT": 
-            print "InputAcc" 
-            policy = policy + 100
-            
+            returnString = returnString + ("Warning: There is no firewall set up for incoming traffic.\n");
+
+
         if dict["FORWARD"] == "ACCEPT":
-            print "ForwardAcc"
-            policy = policy + 10
+            returnString = returnString + ("Warning: There is no firewall set up for forwarding traffic.\n");
+
             
         if dict["OUTPUT"] == "ACCEPT":
-            print "OutputAcc"
-            policy = policy + 1
-            
-        
-        if (policy >= 100):
-            returnString = returnString + ("Warning: There is no firewall set up for incoming traffic.\n");
-            policy = policy - 100
-            
-        if (policy >= 10):
-            returnString = returnString + ("Warning: There is no firewall set up for forwarding traffic.\n");
-            policy = policy - 10
-            
-        if (policy >= 1):
             returnString = returnString + ("Warning: There is no firewall set up for outgoing traffic.\n");
-            policy = policy - 1
 
         return returnString
 
@@ -279,16 +262,42 @@ class groups(AuditModule):
     @staticmethod        
     def evaluate(dict):
         returnString = ""
+        
+        for key in dict:
+            if dict[key][1] == "!":
+                #Unencrypted
+                returnString += "The group " + dict[key] + "'s password is unencrypted and stored in /etc/security/passwd."
+                
+            elif dict[key][1] == "*":
+                #Invalid
+                returnString += "The group " + dict[key] + "'s password is invalid."
+                
+        
         return returnString
 
 class lastlog(AuditModule):
-
+    
+    #Unsure how to parse...
     @staticmethod
     def read(file):
-        value = {}   
+        value = dict()
+        
+        next_line = file.readline()
+        
+        
+        while next_line and not "wtmp begins " in next_line:
+            next_values = next_line.split()
+            
+        next_line = file.readline() #Skip line    
+        while next_line:
+            next_values = next_line.split()
+            
+            
+            
         return value
     @staticmethod
     def evaluate(dict):
+        #Not sure how to evaluate...
         returnString = ""
         return returnString
 
@@ -301,7 +310,7 @@ class modprobe(AuditModule):
         while True:
             nextLine = file.readline()    
             if ("Module" in nextLine): break
-            modprobes = modprobes + "%" + nextLine
+            modprobes = modprobes + nextLine[:-1] + "%"
         
         values["modprobe.d"] = modprobes
         
@@ -315,8 +324,60 @@ class modprobe(AuditModule):
         return values
     @staticmethod
     def evaluate(dict):
-        pass
+        
+        returnString = ""
+        
+        modprobe_file = open("modprobe_folders", "r")
+        
+        config_list = []
+        blacklist = []
+        important_list = []
+        
+        customer_modules = []
+        
+        
+        next_line = modprobe_file.readline() #Skip line
+        next_line = modprobe_file.readline()
+        
+        while next_line and not next_line.startswith("#"):
+            config_list.append(next_line[:-1])
+            next_line = modprobe_file.readline()
+            
+        next_line = modprobe_file.readline() # Skip line
+        
+        while next_line and not next_line.startswith("#"):
+            blacklist.append(next_line[:-1])
+            next_line = modprobe_file.readline()        
 
+        next_line = modprobe_file.readline() # Skip line
+        
+        while next_line and not next_line.startswith("#"):
+            important_list.append(next_line[:-1])
+            next_line = modprobe_file.readline()   
+            
+        customer_config_list = dict["modprobe.d"].split("%")
+
+        dict.pop("modprobe.d", None)
+        dict.pop("", None)
+        
+        for key in dict:
+            customer_modules.append(key)
+
+        for config in config_list:
+            if config not in customer_config_list:
+                returnString += "The expected file " + config + " is not in your system.\n"
+                
+        for module in customer_modules:
+            if module in blacklist:
+                returnString += "The system contains the blacklisted module " + module + "\n"
+        
+        for module in important_list:
+            if module not in customer_modules:
+                returnString += "The system does not contain the important module " + module + "\n"
+
+
+        return returnString 
+    
 class networkvolume(AuditModule):
     @staticmethod
     def read(file):

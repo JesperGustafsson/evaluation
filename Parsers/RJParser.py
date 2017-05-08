@@ -287,10 +287,13 @@ class lastlog(AuditModule):
         
         while next_line and not "wtmp begins " in next_line:
             next_values = next_line.split()
+            next_line = file.readline()
             
         next_line = file.readline() #Skip line    
         while next_line:
             next_values = next_line.split()
+            next_line = file.readline()
+
             
             
             

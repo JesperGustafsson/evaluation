@@ -96,9 +96,7 @@ class diskvolume(AuditModule):
         returnString = ""
         
         for key in dict:
-            print "key: " + key 
             if int(float(dict[key][4][:-1])) > 80:
-                print dict[key][4][:-1]
                 returnString += "The filesystem " + key + " is at " + dict[key][4] + " capacity.\n"
             
         return returnString
@@ -131,7 +129,6 @@ class encrypted_disk(AuditModule):
         returnString = ""
         uuid_dict = {}
         
-        print dict
         
         for key in dict0:
             for key_key in dict0:
@@ -446,7 +443,6 @@ class open_connections(AuditModule):
         
         file.readline() #Skip first line
         next_line = file.readline()
-        print not "COMMAND" in next_line
         while (next_line and not "COMMAND" in next_line):
             innerValues = next_line.split()
             values[innerValues[4]] = innerValues
@@ -564,7 +560,6 @@ class processes(AuditModule):
         
         for key in dict.iterkeys():
             customer_process = dict[key][10][:-1]
-            print "{" + customer_process + "}"
             
             #if process is blacklist
             if customer_process in blacklist:
@@ -628,7 +623,6 @@ class sshd(AuditModule):
         next_line = file.readline()
         
         while (next_line):
-            print next_line
 
             if "No such file or directory" in next_line:
                 values["/etc/ssh/sshd_config"] = "No such file or directory"
@@ -664,7 +658,6 @@ class sshd(AuditModule):
             if key == "LoginGraceTime":
                 intstr = int(value)
                 if intstr > 120:
-                    print "##############"
                     returnString += "The server will have to wait " + "\"" + value + "\"" + " seconds before disconnecting after a unseccessful login connect request. You should change it to 60 seconds or 120 seconds.\n\n"
 
             if key == "ListenAddress":
@@ -727,12 +720,9 @@ class startup(AuditModule):
             blacklist.append(next_line[:-1])
             next_line = startup_file.readline()
 
-        print blacklist
         for key in dict:
             #If dangerous
-            print "{" + key + "}"
             if key in blacklist:
-                print "KEY ::: " + key
                 returnString += "The process " + key + " is started along the system. This is considered a security risk.\n"
             
             if key in expected:

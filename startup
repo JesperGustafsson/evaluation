@@ -1,0 +1,6 @@
+## Expected ##
+bluetooth
+avahi-daemon
+expected-service
+## Blacklist ##
+apparmor

@@ -700,6 +700,43 @@ class startup(AuditModule):
     @staticmethod
     def evaluate(dict):
         returnString = ""
+        
+        blacklist = []
+        expected  = []
+        
+        
+        customer_startups = []
+        
+        startup_file = open("startup", "r")
+        
+        next_line = startup_file.readline() # Skip first line
+        next_line = startup_file.readline()
+
+        while next_line and "#" not in next_line:
+            expected.append(next_line[:-1])
+            next_line = startup_file.readline()
+            
+        next_line = startup_file.readline() # Skip line
+
+        while next_line:
+            blacklist.append(next_line[:-1])
+            next_line = startup_file.readline()
+
+        print blacklist
+        for key in dict:
+            #If dangerous
+            print "{" + key + "}"
+            if key in blacklist:
+                print "KEY ::: " + key
+                returnString += "The process " + key + " is started along the system. This is considered a security risk.\n"
+            
+            if key in expected:
+                expected = [x for x in expected if x != key]
+
+        if len(expected) > 0:
+            returnString += "The processes: " + str(expected) + " were expected to start along with the systems but do not. This is considered a security risk.\n"
+        
+                
         return returnString
     
 class sudoers(AuditModule):

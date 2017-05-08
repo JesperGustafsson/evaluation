@@ -96,8 +96,10 @@ class diskvolume(AuditModule):
         returnString = ""
         
         for key in dict:
-            if dict[key][4][:-1] > 80:
-                returnString += "The filesystem " + key + " is at " + dict[key][4] + " capacity."
+            print "key: " + key 
+            if int(float(dict[key][4][:-1])) > 80:
+                print dict[key][4][:-1]
+                returnString += "The filesystem " + key + " is at " + dict[key][4] + " capacity.\n"
             
         return returnString
 

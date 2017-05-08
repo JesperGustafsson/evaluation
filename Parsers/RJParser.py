@@ -594,25 +594,129 @@ class samba(AuditModule):
                 values["/etc/samba/smb.conf"] = "No such file or directory"
                 return values
             
-            if "#" in next_line or "" in next_line:
+            if "#" in next_line or next_line.isspace():
                 next_line = file.readline()
                 continue
             
             if "[" in next_line:
                 level = next_line
+                next_line = file.readline()
                 continue
             
-            next_values = next_line.split("=")
+            next_values = next_line.split(" = ")
             
-            values[next_values[0]] = [next_values[1], level]
+            values[next_values[0].lstrip()] = [next_values[1][:-1], level[:-1]]
             
             next_line = file.readline()
         
         return values
     @staticmethod
-    def evaluate(dict):
+    def evaluate(info):
         returnString = ""
         
+        samba_file = open("samba", "r")
+        
+        print info
+        
+        samba_dict = dict()
+        
+        samba_lists = [[]]
+        
+        
+        samba_important_keys = []
+        
+        samba_lists[0] = ([1, 2, 3])
+        samba_lists.append([17, 6, 5])
+        
+        next_line = samba_file.readline()
+        
+        while next_line:
+            if next_line.startswith("%") or next_line.isspace():
+                next_line = samba_file.readline()
+                continue
+            print next_line
+            samba_k_v_l = next_line[:-1].split("=")
+            print samba_k_v_l
+            samba_key = samba_k_v_l[0]
+            samba_v_l = samba_k_v_l[1].split(",")
+            print samba_v_l
+            
+            
+            next_line = samba_file.readline()
+            samba_values = samba_v_l[0].split("|")
+            samba_levels = samba_v_l[1].split("|")
+            
+            if samba_key.startswith("#"): samba_important_keys.append(samba_key[1:])
+                
+            
+            print "###"
+            print samba_key
+            print samba_values
+            print samba_levels
+            print "%%%"
+            
+            samba_dict[samba_key] = [samba_values, samba_levels]
+            
+            
+
+            
+            
+        print "IMPORTANT KEYS " + str(samba_important_keys)
+        print samba_dict
+        print info
+
+
+        for key in samba_dict:
+            print key
+            if key[1:] in info.keys():
+                print "ifif"
+                
+                #if Dangerous key
+                if key.startswith("^"):
+                    print "DANGER KEY : " + key
+                    returnString += "DANGER KEY: " + key
+                    
+                else:
+                    customer_value = info[key[1:]][0]
+                    customer_level = info[key[1:]][1]
+                    samba_values = samba_dict[key][0]
+                    samba_levels = samba_dict[key][1]
+                    #if Dangerous level
+                    if "^" + customer_level in samba_levels:
+                        print "DANGER LEVEL : " + customer_level
+                        
+                    #if not preferable level
+                    elif "<" + customer_level in samba_levels:
+                        print "NOT PREFER LEVEL : " + customer_level
+                    
+                    #cant find level in samba txt    
+                    elif "*" + customer_level not in samba_levels:
+                        print "NOT predetermined LEVEL : " + customer_level
+                    
+                    
+                    #if Dangerous value
+                    if "^" + customer_value in samba_values:
+                        print "DANGER VALUE : " + customer_value
+                    
+                    #if not preferable value
+                    elif "<" + customer_value in samba_values:
+                        print "NOT PREFER VALUE : " + customer_value
+                        
+                    #cant find value in samba txt
+                    elif "*" + customer_level not in samba_values:
+                        print "NOT predetermined VALUE : " + customer_value
+                  
+                samba_important_keys = [x for x in samba_important_keys if x != key[1:]]
+            #cant find key in samba  
+            else: 
+                #if key is important"
+                if key.startswith("#"):
+                    print "IMPORTANT KEY : " + key + " NOT FOUND!"
+                    
+                    
+            
+        
+        print "FINAL IMPORTANT KEYS : " + str(samba_important_keys)
         return returnString
 
 class sshd(AuditModule):

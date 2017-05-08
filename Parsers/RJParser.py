@@ -486,22 +486,78 @@ class passwdpolicy(AuditModule):
         return values
 
     @staticmethod
-    def evaluate(dict):
-
-            
+    def evaluate(info):
+        
         returnString = ""
 
-        if dict["ENCRYPT_METHOD"] == "MD5":
+        
+        passwd_file = open("passwdpolicy", "r")
+        
+        next_line = passwd_file.readline()
+        
+        important_keys = []
+        passwd_dict = dict()
+        
+        while next_line:
+            
+            if (next_line.isspace() or next_line.startswith("%")):
+                next_line = passwd_file.readline()
+                continue
+            
+            passwd_key = next_line.split("=")[0]
+            
+            passwd_values = next_line.split("=")[1][:-1]
+            
+            passwd_dict[passwd_key] = passwd_values
+            next_line = passwd_file.readline()
+        
+        print passwd_dict
+        print info
+        
+        for key in passwd_dict:
+            #If key is in customer
+            if info.has_key(key[1:]):
+                #If key is dangerous
+                if (key.startswith("^")):
+                    returnString += "The key " + key + " is considered dangerous.\n"
+                
+                else:
+                    customer_value = info[key[1:]]
+                    values = passwd_dict[key]
+                    print key
+                    print "customer: " + customer_value
+                    print "values:   " + str(values)
+                    #If value is dangerous
+                    if "^" + customer_value in values:
+                        returnString += "The value " + customer_value + " is considered dangerous. Consider switching to " + str([x for x in values if not x.startswith("^")] + ". prefeably one of " + str([x for x in values if x.startswith("*")])) + "\n"
+                    
+                    #If value is not prefered
+                    if "<" + customer_value in values:
+                        returnString += "The value " + customer_value + " is not considered preferable. Consider switching to one of " + str([x for x in values if x.startswith("*")]) + "\n"
+                        
+            #If not found in customer
+            else:
+                #If key is important
+                if (key.startswith("#")):
+                    important_keys.append(key[1:])
+                    #Add recomended value?
+        
+        if len(important_keys) > 0:  
+                returnString += "The following important keys were not found: " + str(important_keys) + "\n"
+        
+        
+
+        """if info["ENCRYPT_METHOD"] == "MD5":
             returnString = (returnString + "Your currently password encrypting method is MD5. " + 
                             "\nYou should consider changing the encrypting method to SHA256 or SHA516.")
             
             
-        if dict["PASS_MIN_DAYS"] > '0': 
+        if info["PASS_MIN_DAYS"] > '0': 
             returnString = (returnString + "Warning: You have to wait " + dict["PASS_MIN_DAYS"] + 
                             " days to change password, this can be a security risk in case of accidental password change.")
 
-
-
+        """
+        
         return returnString
 
 class processes(AuditModule):

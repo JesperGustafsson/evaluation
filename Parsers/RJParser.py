@@ -816,6 +816,15 @@ class sshd(AuditModule):
             if key == "PasswordAuthentication":
                 if value == "no":
                     returnString += "PasswordAuthentication are currently set to \"no\". You should set it to \"yes\" to always use a password based authentication.\n\n"
+            if key == "AllowAgentForwarding ":
+                if value == "yes":
+                    returnString += "AllowAgentForwarding is currently set to \"yes\". This should explicity be set to NO, and will disable the option to jump from one system to another, using only.\n\n"
+            if key == "X11Forwarding":
+                if value == "yes":
+                    returnString += "X11Forwarding is currently set to \"yes\". This should explicitly be set to NO, and will disable a remote X-window or X-shell to be used by an attacker.\n\n"
+            if key == "AllowTcpForwarding":
+                if value == "yes":
+                    returnString += "AllowTcpForwarding is currently set to \"yes\". This should explicitly be set to NO, and will disable the option to jump from one system to another, using only SSH.\n\n"
 
         return returnString
 

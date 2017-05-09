@@ -175,6 +175,9 @@ class environment(AuditModule):
             
             next_line = env_file.readline()
             
+        print info
+        print env_dict
+            
         for key in env_dict:
             #check if key exists in customer file
             if info.has_key(key[1:]):

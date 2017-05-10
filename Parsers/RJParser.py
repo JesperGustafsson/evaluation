@@ -6,6 +6,7 @@ Created on May 3, 2017
 
 import itertools
 import yaml
+from symbol import comparison
 
 class AuditModule():
     @staticmethod
@@ -163,60 +164,22 @@ class environment(AuditModule):
     @staticmethod
     def evaluate(info):
         returnString = ""
-        env_file = open("acceptable_env.txt", "r")
-        
-        with open("yamltest.yaml", "r") as stream:
-            data_loaded = yaml.load(stream)
-        
-        env_dict = dict()
-        print "###"
-        for key in data_loaded:
-            print key + ": "
-            for keykey in data_loaded[key]:
-                print str(keykey) + ": "
-                values = data_loaded[key][keykey]
-                print "Severity: " + values[0]
-                print "Message: " + values[1]
-        print "###"
-        
-        next_line = env_file.readline()
-        while next_line:
-            if not("%" in next_line or next_line.isspace()):
-                key = next_line.split("=")[0]
-                values = next_line.split("=")[1].split("|")
-                values[len(values) - 1] = values[len(values) - 1][:-1]
-                env_dict[key] = values
-            
-            next_line = env_file.readline()
-            
-            
-        for key in env_dict:
-            #check if key exists in customer file
-            if info.has_key(key[1:]):
-                #check if key is dangerous
-                if key.startswith("^"):
-                    returnString += "The environment key " + key 
-                    + " is considered dangerous. Consider removing it\n"
-            
-                else:
-                    customer_value = info[key[1:]]
-                    values = env_dict[key]
 
-                    #check if value is dangerous
-                    if "^" + customer_value in values:
-                        returnString += "The value for the environment key " + key[1:] + " is considered dangerous. Consider changing to one of " + str([x[1:] for x in values if not x.startswith("^")]) + " preferably one of " + str([x[1:] for x in values if x.startswith("*")]) + "\n"
-                    
-                    #check if value is not preferable
-                    elif "<" + customer_value in values:
-                        if len([x for x in values if x.startswith("*")]) > 0:
-                            returnString += "The value for the environment key " + key[1:] + " is not considered preferable. Consider changing to one of " + str([x[1:] for x in values if x.startswith("*")]) + "\n" 
-                    
-                    #
-                    else: 
-                        returnString += "The value " + customer_value + " for the key " + key[1:] + " was not found in our list of \"predetermined\" values. \n\tRecommended values: " + str([x[1:] for x in values if x.startswith("*")]) + "\n\tOkay values: " + str([x[1:] for x in values if x.startswith("<")]) + "\n"
-                    
-            elif (key.startswith("#")):
-                returnString += "The environment key " + key[1:] + " could not be found. It is considered important.\n"
+        
+        with open("environment.yaml", "r") as stream:
+            data_loaded = yaml.load(stream)
+
+        for key in data_loaded:
+            #check if key exists in customer file
+            if info.has_key(key):
+                customer_value = info[key]
+                values = data_loaded[key]
+                for comparison in values:
+                    message = compare(customer_value, values[comparison], comparison)
+                    if message is not None: returnString += message + "\n"
+                
+                
+                
 
         return returnString
 
@@ -808,7 +771,6 @@ class sshd(AuditModule):
                 
                 for comparison in values:    
                     message = compare(customer_value, values[comparison], comparison)
-
                     if message is not None: returnString += message + "\n"
 
                 
@@ -1063,6 +1025,7 @@ def compare(customer_value, values, comparison):
         
         if int(customer_value) < int(value):
             message = values["msg"]
+            severity = values["severity"]
             return message
         
     if comparison == "ngr":
@@ -1075,12 +1038,12 @@ def compare(customer_value, values, comparison):
     if comparison == "nbtwn":
 
         values = values["values"]
-        for ranges in values:
-            for range in ranges[1:]:
-                range_max = max(range)
-                range_min = min(range)
+        for message in values:
+            for ranges in values[message]["ranges"]:
+                range_max = max(ranges)
+                range_min = min(ranges)
                 if int(customer_value) < range_max and int(customer_value) > range_min:
-                    message = ranges[0]
+                    severity = values[message]["severity"]
                     return message
             
     pass

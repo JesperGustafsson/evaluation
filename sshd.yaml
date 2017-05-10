@@ -30,9 +30,11 @@
 LoginGraceTime:
   nlt: 
     value: 60
+    severity: YELLOW
     msg: LoginGraceTime is less than 60
   ngr: 
     value: 120
+    severity: RED
     msg: LoginGraceTime is greater than 120
   neq: 
     values: 
@@ -46,18 +48,18 @@ LoginGraceTime:
         severity: MEME
         msg: 600 bad (
   nbtwn: 
-    values: #All ranges
-      - #Ranges for one particular response message
-       - VALUE BETWEEN 1  #Message
-       - [30, 60] #A single range
-       - [2, 5]
+    values: 
+       'VALUE BETWEEN 1': #MESSAGE FOR BELOW RANGES
+        ranges:
+          - [30, 60]
+          - [2, 5]
+        severity: RED
         
-      - 
-       - VALUE BETWEEN 2
-       - [65, 68]
-       - [7, 10]
-       
-       
+       'VALUE BETWEEN 2':
+        ranges:
+          - [65, 68]
+          - [7, 10]
+        severity: YELLOW
 
 
 PermitRootLogin:

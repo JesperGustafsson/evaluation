@@ -27,16 +27,19 @@ class cron_at(AuditModule):
         
         while next_line:
             
+            print next_line
+            inner_values = next_line.split()
+
+            
             if "No such file or directory" in next_line:
-                fileIndex = fileIndex + 1
-                values[files[fileIndex]] = "No such file or directory"
+                values[inner_values[3][1:-2]] = ["No such file or directory"] #[1:-2] is to trim the filename from ' and ':
             
             elif "total" in next_line:
                 fileIndex = fileIndex + 1
             
             else: 
-                innerValues = next_line.split()
-                values[files[fileIndex]+innerValues[8]] = innerValues
+                #[permissions][?][owner][group][size][month][day][hour:min][filename]
+                    values[inner_values[8]] = inner_values
                 
             next_line = file.readline()
                 
@@ -45,16 +48,22 @@ class cron_at(AuditModule):
     @staticmethod
     def evaluate(dict):
         returnString = ""
-    
-        for key, value in dict.items():
-            if ("No such file or directory" in value):
-                returnString = returnString + "No " + key + " has been set up.\n"
+        
+        print dict
+        
+        with open("cron_at.yaml", "r") as stream:
+            data_loaded = yaml.load(stream)
             
-            else:
-                permissions = value[0].split("")
-                if (permissions[8] == "w"):
-                    returnString = returnString + ("\n Warning! Any user can alter the cron for " + key
-                     + "\n It would be a good idea to change permissions so that only the owner and group can write to this file");
+        print data_loaded
+    
+        for key in data_loaded:
+            if dict.has_key(key):
+                customer_value = dict[key][0]
+
+                for comparison in data_loaded[key]:
+                    values = data_loaded[key][comparison]         
+                    message = compare(customer_value, values, comparison)
+                    if message is not None: returnString += message + "\n"
 
         return returnString
 
@@ -64,16 +73,35 @@ class crontab(AuditModule):
         values = dict()
         notSetupString = "No crontab has been set up for the following: \n"
         
+        
         next_line = file.readline()[:-1]
         while (next_line): 
-            notSetupString += (next_line.split(" ")[3]);
+            crontab = next_line.replace("no crontab for ", "")
+            values[crontab] = "no"
             next_line = file.readline()[:-1]    
         return values
 
     @staticmethod
-    def evaluate(dict):
-        """Already implemented in the read method"""
-        pass
+    def evaluate(info):
+        returnString = ""
+
+        with open("crontab.yaml", "r") as stream:
+            data_loaded = yaml.load(stream)
+        
+        for key in data_loaded:
+            if info.has_key(key):
+                customer_value = info[key]
+                
+                for comparison in data_loaded[key]:
+                    values = data_loaded[key][comparison]
+                    print customer_value
+                    print values
+                    print comparison
+                    message = compare(customer_value, values, comparison)
+                    if message is not None: returnString += message + "\n"
+
+        
+        return returnString
 
 class diskvolume(AuditModule):
     @staticmethod
@@ -771,6 +799,7 @@ class sshd(AuditModule):
                 
                 for comparison in values:    
                     message = compare(customer_value, values[comparison], comparison)
+
                     if message is not None: returnString += message + "\n"
 
                 
@@ -1011,6 +1040,7 @@ class users(AuditModule):
         return returnString
 
 def compare(customer_value, values, comparison):
+    print "COMPARISON: " + comparison
     #Not equal 
     if comparison == "neq":
         values = values["values"]
@@ -1045,5 +1075,29 @@ def compare(customer_value, values, comparison):
                 if int(customer_value) < range_max and int(customer_value) > range_min:
                     severity = values[message]["severity"]
                     return message
+                
+    if comparison == "permissions":
+        for permission_group in values:
+            if permission_group == "other":
+                other_rwx = customer_value[7:]
+                for permission in values[permission_group]:
+                    if permission in other_rwx:
+                        message = values[permission_group][permission]["msg"]
+                        return message
+                    
+            if permission_group == "user":
+                user_rwx = customer_value[1:4]
+                for permission in values[permission_group]:
+                    if permission in user_rwx:
+                        message = values[permission_group][permission]["msg"]
+                        return message
+            
+            if permission_group == "group":
+                group_rwx = customer_value[4:7]
+                for permission in values[permission_group]:
+                    if permission in group_rwx:
+                        message = values[permission_group][permission]["msg"]
+                        return message
+        
             
     pass

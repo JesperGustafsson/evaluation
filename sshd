@@ -1,0 +1,54 @@
+key
+value, severity, message
+value2, severity, message
+..
+..
+
+key2
+value, severity, message
+
+
+///////////////////////
+///////////////////////
+
+
+key
+value, value2, value3
+severity, severity2, severity3
+message, message2, message3
+keyMessage
+
+{key: [[v, v2, v3], [s, s2, s3], [m, m2, m3], null], key2: [[v, v2, v3], [s, s2, s3], [m, m2, m3], Dangerous Key]}
+
+
+Ex.
+PermitRootLogin
+yes
+RED
+PermitRootLogin is set to \yes\ this will allow multiple sysadmins to login to the server as root and the system might not know which sysadmins are logged in as root. You should change PermitRootLogin to \"no\" so the sysadmins have to login to the system first using their accounts before they can do \"-su\".\n\n"
+null
+
+#RSAAutentication
+no
+RED
+RSAAuthentication are currently set to \"no\". You should set it to \"yes\" to be able to use public and private key pairs created by the ssh-keygen1utility for authentication purposes.\n\n"
+null
+
+            
+   
+
+for key in sshd_dict:
+	om kunden har nyckeln:
+		om nyckeln är farlig:
+			skriv ut keyMessage
+		annars:
+			om value är farlig:
+				skriv ut message
+			om 
+			
+			
+YAML, JSON
+
+			
+			
+		

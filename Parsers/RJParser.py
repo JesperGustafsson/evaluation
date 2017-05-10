@@ -108,27 +108,38 @@ class diskvolume(AuditModule):
     def read(file):
         values = dict()
         file.readline() #Skip first line
-        
-        while True:
+        next_line = file.readline()
+        column = ["filesystem", "size", "used", "avail", "use%", "mount"]
+        while next_line:
+            inner_dict = dict()
             #[Filesystem][Size][Used][Avail][Use%][Mounted on]
-            nextLine = file.readline()
-            
-            if (nextLine == ""): 
-                break
-            
-            innerValues = nextLine.split()
-            values[innerValues[5]] = innerValues
+            inner_values = next_line.split()
+            for index in range(0, 6):
+                inner_dict[column[index]] = inner_values[index]
+
+            inner_dict["use%"] = inner_dict["use%"][:-1]        # Removes the % sign
+            values[inner_values[5]] = inner_dict
+            next_line = file.readline()
 
         return values
 
     @staticmethod
-    def evaluate(dict):
+    def evaluate(info):
         returnString = ""
         
-        for key in dict:
-            if int(float(dict[key][4][:-1])) > 80:
-                returnString += "The filesystem " + key + " is at " + dict[key][4] + " capacity.\n"
-            
+        with open ("diskvolume.yaml", "r") as stream:
+            loaded_data = yaml.load(stream)
+        for key in loaded_data:
+            if info.has_key(key):
+                customer_map = info[key]
+                for column in customer_map:
+                    customer_value = customer_map[column]
+                    if not loaded_data[key].has_key(column): continue
+                    for comparison in loaded_data[key][column]:
+                        values = loaded_data[key][column][comparison]
+                        message = compare(customer_value, values, comparison)
+                        if message is not None: returnString += message + "\n"
+        
         return returnString
 
 class encrypted_disk(AuditModule):

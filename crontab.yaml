@@ -11,3 +11,5 @@
      'no':
         severity: YELLOW
         msg: A crontab has not been set up for important_job, which is expected
+        
+        

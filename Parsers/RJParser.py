@@ -228,34 +228,47 @@ class firewall(AuditModule):
     def read(file):
         values = dict()
         
-        while True:
-            nextLine = file.readline()
-            if (nextLine == ""): break
-            innerValues = nextLine.split()
-            if (innerValues and innerValues[0] == "Chain"):
-                chain = innerValues[1]
-                policy = innerValues[3].split(")")[0]
+        next_line = file.readline()
+        
+        while next_line:
+            
+            inner_values = next_line.split()
+            if (inner_values and inner_values[0] == "Chain"):
+                chain = inner_values[1]
+                policy = inner_values[3].split(")")[0]
                 values[chain] = policy
+                
+                
+            next_line = file.readline()
                 
         return values
 
 
     @staticmethod
-    def evaluate(dict):
+    def evaluate(info):
         returnString = ""
         
-        policy = 000
-        
-        if dict["INPUT"] == "ACCEPT": 
-            returnString = returnString + ("Warning: There is no firewall set up for incoming traffic.\n");
-
-
-        if dict["FORWARD"] == "ACCEPT":
-            returnString = returnString + ("Warning: There is no firewall set up for forwarding traffic.\n");
-
+        with open("firewall.yaml", "r") as stream:
+            data_loaded = yaml.load(stream)
             
-        if dict["OUTPUT"] == "ACCEPT":
-            returnString = returnString + ("Warning: There is no firewall set up for outgoing traffic.\n");
+        print data_loaded
+        
+        print info
+        
+        for trafic in data_loaded:
+            columns = data_loaded[trafic]
+            if data_loaded[trafic].has_key("policy"):
+                for comparison in data_loaded[trafic]["policy"]:
+                    customer_value = info[trafic]
+                    values = data_loaded[trafic]["policy"][comparison]
+                    
+                    print "#####"
+                    print customer_value
+                    print values
+                    print comparison
+                    
+                    message = compare(customer_value, values, comparison)
+                    if message is not None: returnString += message + "\n"
 
         return returnString
 

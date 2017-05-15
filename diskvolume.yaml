@@ -19,4 +19,10 @@
       severity: BLUE
       msg: The / filesystem is over 65% capactiy.
       
+'default':
+  'use%': 
+    ngr: 
+      value: 90
+      severity: YELLOW
+      msg: The filesystem /fs/ is over 90% capacity
   

@@ -7,6 +7,7 @@ Created on May 3, 2017
 import itertools
 import yaml
 from symbol import comparison
+from multiprocessing.forking import duplicate
 
 class AuditModule():
     @staticmethod
@@ -126,7 +127,9 @@ class diskvolume(AuditModule):
     @staticmethod
     def evaluate(info):
         returnString = ""
-        
+        info_copy = dict(info)
+
+
         with open ("diskvolume.yaml", "r") as stream:
             loaded_data = yaml.load(stream)
         for key in loaded_data:
@@ -139,6 +142,21 @@ class diskvolume(AuditModule):
                         values = loaded_data[key][column][comparison]
                         message = compare(customer_value, values, comparison)
                         if message is not None: returnString += message + "\n"
+                        
+                info_copy.pop(key)
+                
+        for key in info_copy:
+            customer_map = info[key]
+            for column in customer_map:
+                customer_value = customer_map[column]
+                if not loaded_data["default"].has_key(column): continue
+                for comparison in loaded_data["default"][column]:
+                    values = loaded_data["default"][column][comparison]
+                    message = compare(customer_value, values, comparison)
+                    if message is not None: 
+                        message = message.replace("/fs/", key)
+                        returnString += message + "\n"
+
         
         return returnString
 
@@ -170,17 +188,26 @@ class encrypted_disk(AuditModule):
         returnString = ""
         uuid_dict = {}
         
-        
         for key in dict0:
-            for key_key in dict0:
+            for key_key in dict0[key]:
                 if ("UUID" in key_key):
-                    uuid_dict[dict0[key][key_key]].append(key)
+                    if uuid_dict.has_key(dict0[key][key_key]):
+                        uuid_dict[dict0[key][key_key]].append(key)
+                    else:
+                        uuid_dict[dict0[key][key_key]] = [key]
                     
         
-        for key in uuid_dict:
-            if len(uuid_dict[key]) != len(set(uuid_dict[key])):
-                returnString += "The UUID " + key + " is shared between the filesystems: " + set(uuid_dict[key]) 
-                + "Because of the low chance of UUID duplication in proper generation it is possible this has been altered maliciously."
+        
+        
+        for uuid in uuid_dict:
+            duplicate_warning_msg = open("duplicate_uuid_warning_msg.txt", "r").read()
+            
+            if len(uuid_dict[uuid]) > 1:
+                print "DUPPEL!"
+                duplicate_warning_msg = duplicate_warning_msg.replace("/uuid/", uuid)
+                duplicate_warning_msg = duplicate_warning_msg.replace("/key_set/", str(set(uuid_dict[uuid])))
+
+                returnString += duplicate_warning_msg + "\n"
                 
         return returnString
 
@@ -280,9 +307,17 @@ class groups(AuditModule):
         
         next_line = file.readline()[:-1]
         
+        
+        
         while next_line:
+            inner_dict = dict()
             inner_values = next_line.split(":")
-            values[inner_values[0]] = inner_values
+            inner_dict["group"] = inner_values[0]
+            inner_dict["password"] = inner_values[1]
+            inner_dict["id"] = inner_values[2]
+            inner_dict["users"] = inner_values[3]
+
+            values[inner_dict["group"]] = inner_dict
             next_line = file.readline()[:-1]
 
             
@@ -292,14 +327,33 @@ class groups(AuditModule):
     def evaluate(dict):
         returnString = ""
         
-        for key in dict:
-            if dict[key][1] == "!":
-                #Unencrypted
-                returnString += "The group " + dict[key] + "'s password is unencrypted and stored in /etc/security/passwd."
-                
-            elif dict[key][1] == "*":
-                #Invalid
-                returnString += "The group " + dict[key] + "'s password is invalid."
+        with open("groups.yaml", "r") as stream:
+            data_loaded = yaml.load(stream)
+            
+        defaults = data_loaded.pop("default")
+        
+        for key in data_loaded:
+            if dict.has_key(key):
+                for column in data_loaded[key]:
+                  customer_value = dict[key][column]
+                  for comparison in data_loaded[key][column]:
+                      values = data_loaded[key][column][comparison]
+                      print "v: " + str(values)
+                      print "cv: " + customer_value
+                      message = compare(customer_value, values, comparison)
+                      print "message: " + str(message)
+            
+            
+        
+        #different, simpler but not as comprehensive solution without using YAML
+#         for key in dict:
+#             if dict[key][1] == "!":
+#                 #Unencrypted
+#                 returnString += "The group " + dict[key] + "'s password is unencrypted and stored in /etc/security/passwd."
+#                 
+#             elif dict[key][1] == "*":
+#                 #Invalid
+#                 returnString += "The group " + dict[key] + "'s password is invalid."
                 
         
         return returnString
@@ -337,14 +391,15 @@ class modprobe(AuditModule):
     @staticmethod
     def read(file):
         values = dict()
-        modprobes = ""
+        modprobes = []
         
         while True:
             nextLine = file.readline()    
             if ("Module" in nextLine): break
-            modprobes = modprobes + nextLine[:-1] + "%"
+            modprobes.append(nextLine[:-1])
         
         values["modprobe.d"] = modprobes
+        print modprobes
         
         while True:
             nextLine = file.readline()
@@ -359,53 +414,121 @@ class modprobe(AuditModule):
         
         returnString = ""
         
-        modprobe_file = open("modprobe_folders", "r")
+        with open("modprobe.yaml", "r") as stream:
+            data_loaded = yaml.load(stream)
         
-        config_list = []
-        blacklist = []
-        important_list = []
-        
-        customer_modules = []
+        print dict    
+        print data_loaded
         
         
-        next_line = modprobe_file.readline() #Skip line
-        next_line = modprobe_file.readline()
+        #Important configs
         
-        while next_line and not next_line.startswith("#"):
-            config_list.append(next_line[:-1])
-            next_line = modprobe_file.readline()
-            
-        next_line = modprobe_file.readline() # Skip line
-        
-        while next_line and not next_line.startswith("#"):
-            blacklist.append(next_line[:-1])
-            next_line = modprobe_file.readline()        
+        for config in data_loaded["important_configs"]:
+            if config == "default":
+                important_configs = data_loaded["important_configs"]["default"]["config"]
+                for i_config in important_configs:
+                    if i_config not in dict["modprobe.d"]:
+                        message = data_loaded["important_configs"]["default"]["message"]
+                        message = message.replace("/conf/", i_config)
+                        returnString += message + "\n"
+            elif config not in dict["modprobe.d"]:
+                message = data_loaded["important_configs"][config]["message"]
+                returnString += message + "\n"
 
-        next_line = modprobe_file.readline() # Skip line
-        
-        while next_line and not next_line.startswith("#"):
-            important_list.append(next_line[:-1])
-            next_line = modprobe_file.readline()   
-            
-        customer_config_list = dict["modprobe.d"].split("%")
 
-        dict.pop("modprobe.d", None)
-        dict.pop("", None)
+        #Important modules
         
-        for key in dict:
-            customer_modules.append(key)
-
-        for config in config_list:
-            if config not in customer_config_list:
-                returnString += "The expected file " + config + " is not in your system.\n"
+        for module in data_loaded["important_modules"]:
+            if module == "default":
+                important_modules = data_loaded["important_modules"]["default"]["module"]
+                for i_module in important_modules:
+                    if i_module not in dict.keys():
+                        message = data_loaded["important_modules"]["default"]["message"]
+                        message = message.replace("/module/", i_module)
+                        returnString += message + "\n"
+                        
+            elif module not in dict.keys():
+                message = data_loaded["important_modules"][module]["message"]
+                returnString += message + "\n"
                 
-        for module in customer_modules:
-            if module in blacklist:
-                returnString += "The system contains the blacklisted module " + module + "\n"
         
-        for module in important_list:
-            if module not in customer_modules:
-                returnString += "The system does not contain the important module " + module + "\n"
+        #Blacklisted configs
+        
+        for config in data_loaded["blacklisted_configs"]:
+            if config == "default":
+                important_configs = data_loaded["blacklisted_configs"]["default"]["config"]
+                for i_config in important_configs:
+                    if i_config in dict["modprobe.d"]:
+                        message = data_loaded["blacklisted_configs"]["default"]["message"]
+                        message = message.replace("/conf/", i_config)
+                        returnString += message + "\n"
+            elif config in dict["modprobe.d"]:
+                message = data_loaded["blacklisted_configs"][config]["message"]
+                returnString += message + "\n" 
+                
+                
+        #Blacklisted modules
+        
+        for module in data_loaded["blacklisted_modules"]:
+            if module == "default":
+                important_modules = data_loaded["blacklisted_modules"]["default"]["module"]
+                for i_module in important_modules:
+                    if i_module in dict.keys():
+                        message = data_loaded["blacklisted_modules"]["default"]["message"]
+                        message = message.replace("/module/", i_module)
+                        returnString += message + "\n"
+                        
+            elif module in dict.keys():
+                message = data_loaded["blacklisted_modules"][module]["message"]
+                returnString += message + "\n"
+                
+#         modprobe_file = open("modprobe_folders", "r")
+#         
+#         config_list = []
+#         blacklist = []
+#         important_list = []
+#         
+#         customer_modules = []
+#         
+#         
+#         next_line = modprobe_file.readline() #Skip line
+#         next_line = modprobe_file.readline()
+#         
+#         while next_line and not next_line.startswith("#"):
+#             config_list.append(next_line[:-1])
+#             next_line = modprobe_file.readline()
+#             
+#         next_line = modprobe_file.readline() # Skip line
+#         
+#         while next_line and not next_line.startswith("#"):
+#             blacklist.append(next_line[:-1])
+#             next_line = modprobe_file.readline()        
+# 
+#         next_line = modprobe_file.readline() # Skip line
+#         
+#         while next_line and not next_line.startswith("#"):
+#             important_list.append(next_line[:-1])
+#             next_line = modprobe_file.readline()   
+#             
+#         customer_config_list = dict["modprobe.d"].split("%")
+# 
+#         dict.pop("modprobe.d", None)
+#         dict.pop("", None)
+#         
+#         for key in dict:
+#             customer_modules.append(key)
+# 
+#         for config in config_list:
+#             if config not in customer_config_list:
+#                 returnString += "The expected file " + config + " is not in your system.\n"
+#                 
+#         for module in customer_modules:
+#             if module in blacklist:
+#                 returnString += "The system contains the blacklisted module " + module + "\n"
+#         
+#         for module in important_list:
+#             if module not in customer_modules:
+#                 returnString += "The system does not contain the important module " + module + "\n"
 
 
         return returnString 
@@ -446,21 +569,29 @@ class networkvolume(AuditModule):
             if key.startswith("1"): mount_keys.append(key)
             elif key.startswith("2"): fstab_keys.append(key)
         
-        returnString += "\n ###Unsure how to evaluate this part... [networkvolume/evaluate] ###\n"
         for key in mount_keys:
             need_this_temp_var = "to_keep_the_for_loop"
-            #Unsure how to parse the first part...
+        
+        #Unsure how to parse the first part (mount)...
         
         
         for key in fstab_keys:
             inner_key = info[key][0].split("=")[1]
             inner_value = key[1:]
-            old_value = uuid_dict.get(inner_key, "")
-            uuid_dict[inner_key] = old_value + key[1:] 
+            if not uuid_dict.has_key(inner_key):
+                uuid_dict[inner_key] = [key]
+            else:
+                uuid_dict[inner_key].append(key)
             
+        print uuid_dict
         for key in uuid_dict:
+            duplicate_warning_msg = open("duplicate_uuid_warning_msg.txt", "r").read()
+
             if len(uuid_dict[key]) > 1:
-                returnString += "The UUID: " + key + " is shared between the filesystems: " + uuid_dict[key]
+                print uuid_dict[key]
+                message = duplicate_warning_msg.replace("/key/", key)
+                message = message.replace("/key_set/", str(uuid_dict[key]))
+                returnString += message + "\n"
             
         
         return returnString
@@ -520,61 +651,72 @@ class passwdpolicy(AuditModule):
         
         returnString = ""
 
-        
-        passwd_file = open("passwdpolicy", "r")
-        
-        next_line = passwd_file.readline()
-        
-        important_keys = []
-        passwd_dict = dict()
-        
-        while next_line:
+        with open("passwd.yaml", "r") as stream:
+            data_loaded = yaml.load(stream)
             
-            if (next_line.isspace() or next_line.startswith("%")):
-                next_line = passwd_file.readline()
-                continue
             
-            passwd_key = next_line.split("=")[0]
-            
-            passwd_values = next_line.split("=")[1][:-1]
-            
-            passwd_dict[passwd_key] = passwd_values
-            next_line = passwd_file.readline()
+        for key in data_loaded:
+            if info.has_key(key):
+                for comparison in data_loaded[key]:
+                    customer_value = info[key]
+                    values = data_loaded[key][comparison]
+                    message = compare(customer_value, values, comparison)
+                    returnString += message + "\n"
         
-        print passwd_dict
-        print info
-        
-        for key in passwd_dict:
-            #If key is in customer
-            if info.has_key(key[1:]):
-                #If key is dangerous
-                if (key.startswith("^")):
-                    returnString += "The key " + key + " is considered dangerous.\n"
-                
-                else:
-                    customer_value = info[key[1:]]
-                    values = passwd_dict[key]
-                    print key
-                    print "customer: " + customer_value
-                    print "values:   " + str(values)
-                    #If value is dangerous
-                    if "^" + customer_value in values:
-                        returnString += "The value " + customer_value + " is considered dangerous. Consider switching to " + str([x for x in values if not x.startswith("^")] + ". prefeably one of " + str([x for x in values if x.startswith("*")])) + "\n"
-                    
-                    #If value is not prefered
-                    if "<" + customer_value in values:
-                        returnString += "The value " + customer_value + " is not considered preferable. Consider switching to one of " + str([x for x in values if x.startswith("*")]) + "\n"
-                        
-            #If not found in customer
-            else:
-                #If key is important
-                if (key.startswith("#")):
-                    important_keys.append(key[1:])
-                    #Add recomended value?
-        
-        if len(important_keys) > 0:  
-                returnString += "The following important keys were not found: " + str(important_keys) + "\n"
-        
+#         passwd_file = open("passwdpolicy", "r")
+#         
+#         next_line = passwd_file.readline()
+#         
+#         important_keys = []
+#         passwd_dict = dict()
+#         
+#         while next_line:
+#             
+#             if (next_line.isspace() or next_line.startswith("%")):
+#                 next_line = passwd_file.readline()
+#                 continue
+#             
+#             passwd_key = next_line.split("=")[0]
+#             
+#             passwd_values = next_line.split("=")[1][:-1]
+#             
+#             passwd_dict[passwd_key] = passwd_values
+#             next_line = passwd_file.readline()
+#         
+#         print passwd_dict
+#         print info
+#         
+#         for key in passwd_dict:
+#             #If key is in customer
+#             if info.has_key(key[1:]):
+#                 #If key is dangerous
+#                 if (key.startswith("^")):
+#                     returnString += "The key " + key + " is considered dangerous.\n"
+#                 
+#                 else:
+#                     customer_value = info[key[1:]]
+#                     values = passwd_dict[key]
+#                     print key
+#                     print "customer: " + customer_value
+#                     print "values:   " + str(values)
+#                     #If value is dangerous
+#                     if "^" + customer_value in values:
+#                         returnString += "The value " + customer_value + " is considered dangerous. Consider switching to " + str([x for x in values if not x.startswith("^")] + ". prefeably one of " + str([x for x in values if x.startswith("*")])) + "\n"
+#                     
+#                     #If value is not prefered
+#                     if "<" + customer_value in values:
+#                         returnString += "The value " + customer_value + " is not considered preferable. Consider switching to one of " + str([x for x in values if x.startswith("*")]) + "\n"
+#                         
+#             #If not found in customer
+#             else:
+#                 #If key is important
+#                 if (key.startswith("#")):
+#                     important_keys.append(key[1:])
+#                     #Add recomended value?
+#         
+#         if len(important_keys) > 0:  
+#                 returnString += "The following important keys were not found: " + str(important_keys) + "\n"
+#         
         
 
         """if info["ENCRYPT_METHOD"] == "MD5":
@@ -597,71 +739,158 @@ class processes(AuditModule):
         values = dict()
         
         next_line = file.readline()
+        next_line = file.readline() # Skip first line
         
         while (next_line):
-            splitted_line = next_line.split()
-            innerValues = ["" for i in range(11)] # Init the list with empty strings
-            for i in range (0, 10):
-                innerValues[i] = splitted_line[i]
-            for i in range (10, len(splitted_line)):
-                innerValues[10] = str(innerValues[10]) + splitted_line[i] + " "
+            inner_dict = dict()
+            next_line = next_line[:-1]
+            inner_values = next_line.split(None, 10)
+            
+            
+            inner_dict["USER"] = inner_values[0]
+            inner_dict["PID"] = inner_values[1]
+            inner_dict["%CPU"] = inner_values[2]
+            inner_dict["%MEM"] = inner_values[3]
+            inner_dict["VSZ"] = inner_values[4]
+            inner_dict["RSS"] = inner_values[5]
+            inner_dict["TTY"] = inner_values[6]
+            inner_dict["STAT"] = inner_values[7]
+            inner_dict["START"] = inner_values[8]
+            inner_dict["TIME"] = inner_values[9]
+            inner_dict["COMMAND"] = inner_values[10]
+            
+            values[inner_dict["COMMAND"]] = inner_dict
+            
             next_line = file.readline()
             
-            values[innerValues[1]] = innerValues
+        
+#         next_line = file.readline()
+#         
+#         while (next_line):
+#             splitted_line = next_line.split()
+#             innerValues = ["" for i in range(11)] # Init the list with empty strings
+#             for i in range (0, 10):
+#                 innerValues[i] = splitted_line[i]
+#             for i in range (10, len(splitted_line)):
+#                 innerValues[10] = str(innerValues[10]) + splitted_line[i] + " "
+#             
+#             innerValues[10] = innerValues[:-1]
+#             next_line = file.readline()
+#             
+#             
+#             values[innerValues[1]] = innerValues
         
         return values
 
     @staticmethod
-    def evaluate(dict):
-        returnString = ""
+    def evaluate(info): #change to dict if using commented code?
+        returnString = ""   
         
-        processes_file = open("processes", "r")
+        info_copy = dict(info)
+        #print info_copy
         
-        next_line = processes_file.readline() #Skip first line
-        next_line = processes_file.readline()
-                
-        expected_processes = []
-        non_root_blacklist = []
-        blacklist = []
-        
- 
-        while next_line and "#" not in next_line and not next_line.isspace():
-            expected_processes.append(next_line[:-1])
-            next_line = processes_file.readline()
-        
-        next_line = processes_file.readline()
-        
-        while next_line and "#" not in next_line and not next_line.isspace():
-            non_root_blacklist.append(next_line[:-1])
-            next_line = processes_file.readline()
-    
-        next_line = processes_file.readline()
-
-
-        while next_line and "#" not in next_line and not next_line.isspace():
-            blacklist.append(next_line[:-1])
-            next_line = processes_file.readline()
+        with open("processes.yaml") as stream:
+            data_loaded = yaml.load(stream)
             
+        default = data_loaded.pop("default")
+        important_processes = data_loaded.pop("important_processes")
+        blacklisted_processes = data_loaded.pop("blacklisted_processes")
+        
+        #important processes
+        for key in important_processes:
+            if key == "default":
+                for process in important_processes["default"]["process"]:
+                    if not info.has_key(process):
+                        message = important_processes["default"]["message"]
+                        message = message.replace("/process/", process)
+                        returnString += message + "\n"
+            elif not info_copy.has_key(key):
+                returnString += important_processes[key]["message"] + "\n"
+        
+        #blacklisted processes
+        for key in blacklisted_processes:
+            if key == "default":
+                for process in blacklisted_processes["default"]["process"]:
+                    if info.has_key(process):
+                        message = blacklisted_processes["default"]["message"]
+                        message = message.replace("/process/", process)
+                        returnString += message + "\n"
+            elif info_copy.has_key(key):
+                returnString += blacklisted_processes[key]["message"] + "\n"
         
         
-        for key in dict.iterkeys():
-            customer_process = dict[key][10][:-1]
-            
-            #if process is blacklist
-            if customer_process in blacklist:
-                returnString += "The process " + customer_process + " currently running on your service is in our blacklist\n"
-            
-            #if process is non root
-            elif customer_process in non_root_blacklist and dict[key][0 != "root"]:
-                returnString += "The process " + customer_process + " currently running on your service as a non-root. This is considered a security risk\n"
-
-            #if expected process is found, it removes it from the exepcted processes list
-            if customer_process in expected_processes:
-                expected_processes = [x for x in expected_processes if x != customer_process]
-                
-        #if expected_processes is NOT empty
-        if expected_processes:
-            returnString += "The following processes were expected but could not be found on your system: " + str(expected_processes) + "\n"
+        #default value check (CPU & MEM usage)
+        #print info_copy
+        for key in info_copy:
+            for column in default:
+                customer_value =  info_copy[key][column]
+                for comparison in default[column]:
+                    values = default[column][comparison]
+                    message = compare(customer_value, values, comparison)
+                    print key
+                    if message is not None:
+                        message = message.replace("/process/", key)
+                        returnString += message + "\n"
+        
+        
+        #other keys
+        
+        for key in data_loaded:
+            for column in data_loaded[key]:
+                for comparison in data_loaded[key][column]:
+                    customer_value = info_copy[key][column]
+                    values = data_loaded[key][column][comparison]
+                    message = compare(customer_value, values, comparison)
+                    
+                    if message is not None:
+                        returnString += message
+#        processes_file = open("processes", "r")
+#   
+#         next_line = processes_file.readline() #Skip first line
+#         next_line = processes_file.readline()
+#                 
+#         expected_processes = []
+#         non_root_blacklist = []
+#         blacklist = []
+#         
+#  
+#         while next_line and "#" not in next_line and not next_line.isspace():
+#             expected_processes.append(next_line[:-1])
+#             next_line = processes_file.readline()
+#         
+#         next_line = processes_file.readline()
+#         
+#         while next_line and "#" not in next_line and not next_line.isspace():
+#             non_root_blacklist.append(next_line[:-1])
+#             next_line = processes_file.readline()
+#     
+#         next_line = processes_file.readline()
+# 
+# 
+#         while next_line and "#" not in next_line and not next_line.isspace():
+#             blacklist.append(next_line[:-1])
+#             next_line = processes_file.readline()
+#             
+#         
+#         
+#         for key in dict.iterkeys():
+#             customer_process = dict[key][10][:-1]
+#             
+#             #if process is blacklist
+#             if customer_process in blacklist:
+#                 returnString += "The process " + customer_process + " currently running on your service is in our blacklist\n"
+#             
+#             #if process is non root
+#             elif customer_process in non_root_blacklist and dict[key][0 != "root"]:
+#                 returnString += "The process " + customer_process + " currently running on your service as a non-root. This is considered a security risk\n"
+# 
+#             #if expected process is found, it removes it from the exepcted processes list
+#             if customer_process in expected_processes:
+#                 expected_processes = [x for x in expected_processes if x != customer_process]
+#                 
+#         #if expected_processes is NOT empty
+#         if expected_processes:
+#             returnString += "The following processes were expected but could not be found on your system: " + str(expected_processes) + "\n"
             
         return returnString
 
@@ -1065,6 +1294,19 @@ class users(AuditModule):
 
 def compare(customer_value, values, comparison):
     print "COMPARISON: " + comparison
+    
+    #Equal
+    
+    if comparison == "eq":
+        print "VALUES::: " + str(values)
+        value  = values.keys()[0]
+        print "VALUES2::: " + value
+
+        if customer_value != value:
+            print "HMMMMMMMMMMM \n [" + customer_value + "]\n [" + value + "]"
+            message = values[value]["msg"]
+            severity = values[value]["severity"]
+            return message    
     #Not equal 
     if comparison == "neq":
         values = values["values"]
@@ -1085,7 +1327,7 @@ def compare(customer_value, values, comparison):
     if comparison == "ngr":
         value = values["value"]
         
-        if int(customer_value) > int(value):
+        if float(customer_value) > float(value):
             message = values["msg"] 
             return message
             

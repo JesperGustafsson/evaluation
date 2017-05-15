@@ -18,14 +18,14 @@ if __name__ == '__main__':
     print tests
     
     
-    for test in tests[4:5]:
+    for test in tests[12:13]:
         print test
         
     
         moduleName = test
         hostname = "jesper-Aspire-E5-571"
         
-        resultPath = "/home/jesper/Documents/remote_job_linux_osx-master-d98598cf1ea7ba905e77c62efb3b52a4bcacf366/result/"
+        resultPath = "/home/jesper/result/"
         
         finalString += "### " + moduleName + " ###\n\n"
         
@@ -41,5 +41,7 @@ if __name__ == '__main__':
        # output.write(str(returnString) + "\n##################\n\n\n\n\n")
     
     output.write(finalString)
+    
+    print "END OF PROGRAM"
 
     pass

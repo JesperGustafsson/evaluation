@@ -729,7 +729,8 @@ class passwdpolicy(AuditModule):
                     customer_value = info[key]
                     values = data_loaded[key][comparison]
                     message = compare(customer_value, values, comparison)
-                    returnString += message + "\n"
+                    if message is not None: 
+                        returnString += message + "\n"
         
 #         passwd_file = open("passwdpolicy", "r")
 #         

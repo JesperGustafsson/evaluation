@@ -7,18 +7,23 @@ Created on May 3, 2017
 
 from Parsers.RJParser import *
 from Parsers import RJParser as rjParser
+from Parsers import LynisParser as lynisParser
+from Parsers import UnixParser as unixParser
 
 if __name__ == '__main__':
 
 
     finalString = ""
+    rjString = ""
+    lynisString = ""
+    unixString = ""
     output = open("Output.txt", "w")
     
     tests = [i[:-1] for i in open("RJTests")]
     print tests
     
-    
-    for test in tests[15:16]:
+    # RJParser
+    for test in tests[:]:
         print test
         
     
@@ -27,7 +32,7 @@ if __name__ == '__main__':
         
         resultPath = "/home/jesper/result/"
         
-        finalString += "### " + moduleName + " ###\n\n"
+        rjString += "### " + moduleName + " ###\n\n"
         
         file = open(resultPath + moduleName + "_info/" + hostname + ".log", "r")
 
@@ -35,13 +40,43 @@ if __name__ == '__main__':
         dict = audit_module.read(file)        
         returnString = audit_module.evaluate(dict)
         
-        finalString += str(returnString)        
-        finalString += "\n##################\n\n\n\n\n"
+        rjString += str(returnString)        
+        rjString += "\n##################\n\n\n\n\n"
         
        # output.write(str(returnString) + "\n##################\n\n\n\n\n")
     
-    output.write(finalString)
+    finalString += "The remote-job has found the following issues:\n\n"
+    finalString += rjString + "\n\n##############################\n##############################\n\n"
     
-    print "END OF PROGRAM"
+
+    print "END OF RJParser"
+    
+    #Lynis
+    
+    lynis_log = "/home/jesper/lynis/lynis.log"
+
+    file = open(lynis_log, "r")
+    
+    dict = lynisParser.read(file)
+    lynisString = lynisParser.evaluate(dict)
+
+    
+    print "END OF LynisParser"
+    finalString += lynisString
+    finalString += "\n\n##############################\n##############################\n\n"
+
+
+    unix_log = "/home/jesper/unix/outputdetailed.txt" #outputdetailed/outputstandard
+    print "UNIX START"
+    file = open(unix_log, "r")
+    
+    dict = unixParser.read(file)
+    unixString = unixParser.evaluate(dict)
+    
+    
+    print "UNIX END"
+    finalString += unixString
+    
+    output.write(finalString)
 
     pass

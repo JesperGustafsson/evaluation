@@ -43,10 +43,10 @@ LoginGraceTime:
         msg: The server will have to wait value seconds before disconnecting after a unseccessful login connect request. You should change it to 60 seconds or 120 seconds.
       '66':
         severity: YELLOW
-        msg: 66 bad :(
+        msg: 66 LoginGrace
       '250':
         severity: MEME
-        msg: 600 bad (
+        msg: 600 LoginGrace
   nbtwn: 
     values: 
        'VALUE BETWEEN 1': #MESSAGE FOR BELOW RANGES

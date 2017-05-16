@@ -3,11 +3,11 @@ SHELL:
     values:
       '/bin/bash': 
         severity: YELLOW
-        msg: /bin/bash is bad (
+        msg: /bin/bash error
       
       '/bin/bad':
         severity: RED
-        msg: BAD BAD
+        msg: /bin/bad error
         
 
 SHLVL:
@@ -15,7 +15,7 @@ SHLVL:
     values:
       '8':  
         severity: RED
-        msg: The shell lvl is 8, pls
+        msg: The shell lvl is 8
   
   nbtwn:
     values: 
@@ -49,6 +49,6 @@ key:
     values:
       'value1':
         severity: YELLOW
-        msg: key = value1 ??
+        msg: key = value1
         
         

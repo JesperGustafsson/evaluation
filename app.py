@@ -9,7 +9,7 @@ from Parsers.RJParser import *
 from Parsers import RJParser as rjParser
 
 if __name__ == '__main__':
-    
+
 
     finalString = ""
     output = open("Output.txt", "w")
@@ -18,7 +18,7 @@ if __name__ == '__main__':
     print tests
     
     
-    for test in tests[12:13]:
+    for test in tests[9:10]:
         print test
         
     

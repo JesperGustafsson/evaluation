@@ -8,6 +8,7 @@ import itertools
 import yaml
 from symbol import comparison
 from multiprocessing.forking import duplicate
+from sqlalchemy.sql.functions import next_value
 
 class AuditModule():
     @staticmethod
@@ -89,17 +90,31 @@ class crontab(AuditModule):
         with open("crontab.yaml", "r") as stream:
             data_loaded = yaml.load(stream)
         
-        for key in data_loaded:
-            if info.has_key(key):
-                customer_value = info[key]
+        
+        blacklist = data_loaded.pop("blacklist")
+        expected = data_loaded.pop("expected")
+        
+        for cronjob in blacklist:
+            if info.has_key(cronjob):
+                message = blacklist[cronjob]["msg"]
+                returnString += message + "\n"
                 
-                for comparison in data_loaded[key]:
-                    values = data_loaded[key][comparison]
-                    print customer_value
-                    print values
-                    print comparison
-                    message = compare(customer_value, values, comparison)
-                    if message is not None: returnString += message + "\n"
+        for cronjob in expected:
+            if not info.has_key(cronjob):
+                message = expected[cronjob]["msg"]
+                returnString += message + "\n"
+                
+#         for key in data_loaded:
+#             if info.has_key(key):
+#                 customer_value = info[key]
+#                 
+#                 for comparison in data_loaded[key]:
+#                     values = data_loaded[key][comparison]
+#                     print customer_value
+#                     print values
+#                     print comparison
+#                     message = compare(customer_value, values, comparison)
+#                     if message is not None: returnString += message + "\n"
 
         
         return returnString
@@ -364,27 +379,65 @@ class lastlog(AuditModule):
     @staticmethod
     def read(file):
         value = dict()
+        last_dict = dict()
+        lastlog_dict = dict()
         
         next_line = file.readline()
         
         
         while next_line and not "wtmp begins " in next_line:
             next_values = next_line.split()
+            if len(next_values) > 1: 
+                last_dict[next_values[0]] = "yes"
             next_line = file.readline()
             
         next_line = file.readline() #Skip line    
         while next_line:
-            next_values = next_line.split()
+            next_values = next_line[:-1].split(None, 1)
+            
+            if len(next_values) > 1: 
+                lastlog_dict[next_values[0]] = next_values[1]
+        
             next_line = file.readline()
-
+            
+        
+        value["last"] = last_dict
+        value["lastlog"] = lastlog_dict
             
             
             
         return value
     @staticmethod
-    def evaluate(dict):
+    def evaluate(info):
         #Not sure how to evaluate...
         returnString = ""
+        
+        with open("lastlog.yaml", "r") as stream:
+            data_loaded = yaml.load(stream)
+            
+        last = data_loaded.pop("last")
+        lastlog = data_loaded.pop("lastlog")
+        info_last = info.pop("last")
+        info_lastlog = info.pop("lastlog")
+        
+        for key in lastlog:
+            if info_lastlog.has_key(key):
+                for comparison in lastlog[key]:
+                    customer_value = info_lastlog[key]
+                    values = lastlog[key][comparison]
+                    message = compare(customer_value, values, comparison)
+                    
+                    if message is not None:
+                        returnString += message + "\n"
+                
+        for key in last:
+            print key
+            if info_last.has_key(key):
+                message = last[key]["msg"]
+                
+                if message is not None:
+                    returnString += message + "\n"        
+                        
         return returnString
 
 class modprobe(AuditModule):    
@@ -537,24 +590,40 @@ class networkvolume(AuditModule):
     @staticmethod
     def read(file):
         values = dict()
+        mount_dict = dict()
+        fstab_dict = dict()
         
         next_line = file.readline()
         
         while next_line and "#" not in next_line:
             innerValues = next_line.split()
-            values["1" + innerValues[2]] = innerValues
+            mount_dict[innerValues[2]] = innerValues
             next_line = file.readline()
 
         while next_line:
+            inner_dict = dict()
             if ("#" in next_line): 
                 next_line = file.readline()
                 continue
-            innerValues = next_line.split()
-            values["2" + innerValues[1]] = innerValues
+            inner_values = next_line.split()
+            
+            
+            inner_dict["file_system"] = inner_values[0]
+            inner_dict["mount_point"] = inner_values[1]
+            inner_dict["type"] = inner_values[2]
+            options = inner_values[3].split(",")
+            inner_dict["options"] = options
+            inner_dict["dump"] = inner_values[4]
+            inner_dict["pass"] = inner_values[5]
+            
+            fstab_dict[inner_dict["mount_point"]] = inner_dict
+
             next_line = file.readline()
 
         
-            
+        values["mount"] = mount_dict
+        values["fstab"] = fstab_dict
+        
         return values
     @staticmethod
     def evaluate(info):
@@ -562,38 +631,55 @@ class networkvolume(AuditModule):
     
         uuid_dict = dict()
         
-        mount_keys = []
-        fstab_keys = []
+        info_mount = info["mount"]
+        info_fstab = info["fstab"]
+     
+        with open("networkvolume.yaml", "r") as stream:
+                warnings = yaml.load(stream)
+        #check duplicates
+        for key in info_fstab:
+            uuid = info_fstab[key]["file_system"].split("=")[1]
+            if uuid_dict.has_key(uuid):
+                uuid_dict[uuid].append(info_fstab[key]["mount_point"])
+            else: 
+                uuid_dict[uuid] = [info_fstab[key]["mount_point"]]
         
-        for key in info:
-            if key.startswith("1"): mount_keys.append(key)
-            elif key.startswith("2"): fstab_keys.append(key)
-        
-        for key in mount_keys:
-            need_this_temp_var = "to_keep_the_for_loop"
-        
-        #Unsure how to parse the first part (mount)...
-        
-        
-        for key in fstab_keys:
-            inner_key = info[key][0].split("=")[1]
-            inner_value = key[1:]
-            if not uuid_dict.has_key(inner_key):
-                uuid_dict[inner_key] = [key]
-            else:
-                uuid_dict[inner_key].append(key)
-            
-        print uuid_dict
         for key in uuid_dict:
-            duplicate_warning_msg = open("duplicate_uuid_warning_msg.txt", "r").read()
-
             if len(uuid_dict[key]) > 1:
-                print uuid_dict[key]
-                message = duplicate_warning_msg.replace("/key/", key)
-                message = message.replace("/key_set/", str(uuid_dict[key]))
+                message = warnings["duplicates"]
+                message = message.replace("/uuid/", key).replace("/key_set/", str(uuid_dict[key]))
                 returnString += message + "\n"
-            
+                
+        ##
         
+        #check for username/password and backup, pass 
+        for key in info_fstab:
+            #check for username/password
+            options = info_fstab[key]["options"]            
+            for option in options:
+                if "password" in option or "username" in option:
+                    message = warnings["username_password"]
+                    returnString += message + "\n"
+        
+            #checks for backup
+            backup = info_fstab[key]["dump"]
+            if backup != 1:
+                message = warnings["backup"]
+                returnString += message + "\n"
+                
+            #checks for pass
+            pass_flag = info_fstab[key]["pass"]
+            print key + " : " + pass_flag
+            if key != "/" and pass_flag == "1":
+                message = warnings["pass_non_root"]
+                returnString += message + "\n"
+                
+            elif key == "/" and pass_flag != "1":
+                message = warnings["pass_root"]
+                returnString += message + "\n"
+                
+        
+            
         return returnString
 
 class open_connections(AuditModule):
@@ -1250,46 +1336,74 @@ class users(AuditModule):
         next_line = file.readline()
         
         while (next_line):    
-            inner_values = next_line.split(":")
+            inner_dict = dict()
+            inner_values = next_line[:-1].split(":", 6)
             
-            values[inner_values[0]] = inner_values
+            inner_dict["username"] = inner_values[0]
+            inner_dict["password"] = inner_values[1]
+            inner_dict["user_id"] = inner_values[2]
+            inner_dict["group_id"] = inner_values[3]
+            inner_dict["user_info"] = inner_values[4]
+            inner_dict["home_dir"] = inner_values[5]
+            inner_dict["shell"] = inner_values[6]
+            
+            values[inner_dict["username"]] = inner_dict
             
             next_line = file.readline()
         
         
         return values
     @staticmethod
-    def evaluate(dict):
+    def evaluate(info):
         returnString = ""
         
-        
-        for key in dict:
+        with open("users.yaml") as stream:
+            data_loaded = yaml.load(stream)
             
-            risks = [False, False, False]
-
-            value = dict[key]
-            if value[2] == "0" and not key == "root":
-                returnString = returnString + "User " + "'" + key + "'" + " has super user rights\n"
-                risks[0] = True
-                
-            if value[1] == "!":
-                returnString = returnString = "User " + "'" + key + "'" + " is stored in /etc/security/passwd and is not encrypted\n"
-                risks[1] = True
-                
-            elif value[1] == "*":
-                returnString = returnString + "User " + "'" + key + "'" + " has an invalid password\n"
-                risks[2] = True
-                
+        print info.has_key("postgres_user")
             
-            if risks[0]:
-                returnString += "\nYou should change the users' priviliges"
-            
-            if risks[1]:
-                returnString += "\nYou should encrypt the users' password"
-            
-            if risks[2]:
-                returnString += "\nYou should change users' password to a valid one"
-                      
+        for key in data_loaded:
+            print key
+            if info.has_key(key):
+                print key
+                for column in data_loaded[key]:
+                    for comparison in data_loaded[key][column]:
+                        values = data_loaded[key][column][comparison]
+                        customer_value = info[key][column]
+                        print "v: " + str(values)
+                        print "cv: " + customer_value
+                        print "c: " + comparison
+                        message = compare(customer_value, values, comparison)
+                        if message is not None: 
+                            returnString += message
+                    
+#         for key in dict:
+#             
+#             risks = [False, False, False]
+# 
+#             value = dict[key]
+#             if value[2] == "0" and not key == "root":
+#                 returnString = returnString + "User " + "'" + key + "'" + " has super user rights\n"
+#                 risks[0] = True
+#                 
+#             if value[1] == "!":
+#                 returnString = returnString = "User " + "'" + key + "'" + " is stored in /etc/security/passwd and is not encrypted\n"
+#                 risks[1] = True
+#                 
+#             elif value[1] == "*":
+#                 returnString = returnString + "User " + "'" + key + "'" + " has an invalid password\n"
+#                 risks[2] = True
+#                 
+#             
+#             if risks[0]:
+#                 returnString += "\nYou should change the users' priviliges"
+#             
+#             if risks[1]:
+#                 returnString += "\nYou should encrypt the users' password"
+#             
+#             if risks[2]:
+#                 returnString += "\nYou should change users' password to a valid one"
+#                       
         return returnString
 
 def compare(customer_value, values, comparison):
@@ -1341,6 +1455,15 @@ def compare(customer_value, values, comparison):
                 if int(customer_value) < range_max and int(customer_value) > range_min:
                     severity = values[message]["severity"]
                     return message
+                
+    if comparison == "in":
+        print "!IN!"
+        print customer_value
+        print values
+        if customer_value not in values["values"]:
+            severity = values["severity"]
+            message = values["msg"]
+            return message
                 
     if comparison == "permissions":
         for permission_group in values:

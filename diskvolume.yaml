@@ -25,4 +25,9 @@
       value: 90
       severity: YELLOW
       msg: The filesystem /fs/ is over 90% capacity
-  
+  'filesystem':
+    neq:
+      values:
+        'nfs':
+          severity: YELLOW
+          msg: The filesystem /fs/ is a NFS system.

@@ -18,7 +18,7 @@ if __name__ == '__main__':
     print tests
     
     
-    for test in tests[9:10]:
+    for test in tests[15:16]:
         print test
         
     

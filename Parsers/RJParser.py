@@ -1172,36 +1172,40 @@ class startup(AuditModule):
         blacklist = []
         expected  = []
         
-        
-        customer_startups = []
-        
-        startup_file = open("startup", "r")
-        
-        next_line = startup_file.readline() # Skip first line
-        next_line = startup_file.readline()
-
-        while next_line and "#" not in next_line:
-            expected.append(next_line[:-1])
-            next_line = startup_file.readline()
+        with open("startup.yaml") as stream:
+            data_loaded = yaml.load(stream)
             
-        next_line = startup_file.readline() # Skip line
-
-        while next_line:
-            blacklist.append(next_line[:-1])
-            next_line = startup_file.readline()
-
-        for key in dict:
-            #If dangerous
-            if key in blacklist:
-                returnString += "The process " + key + " is started along the system. This is considered a security risk.\n"
-            
-            if key in expected:
-                expected = [x for x in expected if x != key]
-
-        if len(expected) > 0:
-            returnString += "The processes: " + str(expected) + " were expected to start along with the systems but do not. This is considered a security risk.\n"
+        expected = data_loaded.pop("expected")
+        blacklist = data_loaded.pop("blacklisted")
+        permission = data_loaded.pop("permission")
+        print dict
         
+        #expected scripts
+        for script in expected["scripts"]:
+            if script not in dict:
+                message = expected["msg"]
+                message = message.replace("/script/", script)
+                returnString += message + "\n"
                 
+        #blacklisted scripts
+        for script in blacklist["scripts"]:
+            if script in dict:
+                message = blacklist["msg"]
+                message = message.replace("/script/", script)
+                returnString += message + "\n"
+
+        #check permissions
+        for key in dict:
+            permissions = dict[key][0]
+            permissions = list(permissions)
+            
+            if permissions[5] == "w" or permissions[8] == "w":
+                message = permission["msg"]
+                message = message.replace("/script/", key)
+                returnString += message + "\n"
+
+            
+            
         return returnString
     
 class sudoers(AuditModule):

@@ -29,7 +29,6 @@ class cron_at(AuditModule):
         
         while next_line:
             
-            print next_line
             inner_values = next_line.split()
 
             
@@ -51,12 +50,10 @@ class cron_at(AuditModule):
     def evaluate(dict):
         returnString = ""
         
-        print dict
         
         with open("cron_at.yaml", "r") as stream:
             data_loaded = yaml.load(stream)
             
-        print data_loaded
     
         for key in data_loaded:
             if dict.has_key(key):
@@ -218,7 +215,6 @@ class encrypted_disk(AuditModule):
             duplicate_warning_msg = open("duplicate_uuid_warning_msg.txt", "r").read()
             
             if len(uuid_dict[uuid]) > 1:
-                print "DUPPEL!"
                 duplicate_warning_msg = duplicate_warning_msg.replace("/uuid/", uuid)
                 duplicate_warning_msg = duplicate_warning_msg.replace("/key_set/", str(set(uuid_dict[uuid])))
 
@@ -293,9 +289,7 @@ class firewall(AuditModule):
         with open("firewall.yaml", "r") as stream:
             data_loaded = yaml.load(stream)
             
-        print data_loaded
         
-        print info
         
         for trafic in data_loaded:
             columns = data_loaded[trafic]
@@ -304,10 +298,6 @@ class firewall(AuditModule):
                     customer_value = info[trafic]
                     values = data_loaded[trafic]["policy"][comparison]
                     
-                    print "#####"
-                    print customer_value
-                    print values
-                    print comparison
                     
                     message = compare(customer_value, values, comparison)
                     if message is not None: returnString += message + "\n"
@@ -353,10 +343,7 @@ class groups(AuditModule):
                   customer_value = dict[key][column]
                   for comparison in data_loaded[key][column]:
                       values = data_loaded[key][column][comparison]
-                      print "v: " + str(values)
-                      print "cv: " + customer_value
                       message = compare(customer_value, values, comparison)
-                      print "message: " + str(message)
             
             
         
@@ -431,7 +418,6 @@ class lastlog(AuditModule):
                         returnString += message + "\n"
                 
         for key in last:
-            print key
             if info_last.has_key(key):
                 message = last[key]["msg"]
                 
@@ -452,7 +438,6 @@ class modprobe(AuditModule):
             modprobes.append(nextLine[:-1])
         
         values["modprobe.d"] = modprobes
-        print modprobes
         
         while True:
             nextLine = file.readline()
@@ -470,8 +455,6 @@ class modprobe(AuditModule):
         with open("modprobe.yaml", "r") as stream:
             data_loaded = yaml.load(stream)
         
-        print dict    
-        print data_loaded
         
         
         #Important configs
@@ -669,7 +652,6 @@ class networkvolume(AuditModule):
                 
             #checks for pass
             pass_flag = info_fstab[key]["pass"]
-            print key + " : " + pass_flag
             if key != "/" and pass_flag == "1":
                 message = warnings["pass_non_root"]
                 returnString += message + "\n"
@@ -873,7 +855,6 @@ class processes(AuditModule):
         returnString = ""   
         
         info_copy = dict(info)
-        #print info_copy
         
         with open("processes.yaml") as stream:
             data_loaded = yaml.load(stream)
@@ -913,7 +894,6 @@ class processes(AuditModule):
                 for comparison in default[column]:
                     values = default[column][comparison]
                     message = compare(customer_value, values, comparison)
-                    print key
                     if message is not None:
                         message = message.replace("/process/", key)
                         returnString += message + "\n"
@@ -1178,7 +1158,6 @@ class startup(AuditModule):
         expected = data_loaded.pop("expected")
         blacklist = data_loaded.pop("blacklisted")
         permission = data_loaded.pop("permission")
-        print dict
         
         #expected scripts
         for script in expected["scripts"]:
@@ -1363,20 +1342,13 @@ class users(AuditModule):
         
         with open("users.yaml") as stream:
             data_loaded = yaml.load(stream)
-            
-        print info.has_key("postgres_user")
-            
+                        
         for key in data_loaded:
-            print key
             if info.has_key(key):
-                print key
                 for column in data_loaded[key]:
                     for comparison in data_loaded[key][column]:
                         values = data_loaded[key][column][comparison]
                         customer_value = info[key][column]
-                        print "v: " + str(values)
-                        print "cv: " + customer_value
-                        print "c: " + comparison
                         message = compare(customer_value, values, comparison)
                         if message is not None: 
                             returnString += message
@@ -1411,17 +1383,13 @@ class users(AuditModule):
         return returnString
 
 def compare(customer_value, values, comparison):
-    print "COMPARISON: " + comparison
     
     #Equal
     
     if comparison == "eq":
-        print "VALUES::: " + str(values)
         value  = values.keys()[0]
-        print "VALUES2::: " + value
 
         if customer_value != value:
-            print "HMMMMMMMMMMM \n [" + customer_value + "]\n [" + value + "]"
             message = values[value]["msg"]
             severity = values[value]["severity"]
             return message    
@@ -1461,9 +1429,6 @@ def compare(customer_value, values, comparison):
                     return message
                 
     if comparison == "in":
-        print "!IN!"
-        print customer_value
-        print values
         if customer_value not in values["values"]:
             severity = values["severity"]
             message = values["msg"]
